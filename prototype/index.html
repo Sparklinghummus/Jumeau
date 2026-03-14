@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Jumeau AI - Interactive Prototype</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Space+Mono&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Main Application Context (Background) -->
+        <main class="context-viewport">
+            <header class="context-header">
+                <h2>CRM Dashboard</h2>
+                <div class="user-avatar"></div>
+            </header>
+            
+            <div class="context-content">
+                <div class="card mock-contact">
+                    <div class="contact-header">
+                        <div class="avatar-large">JD</div>
+                        <div class="contact-info">
+                            <h3>John Doe</h3>
+                            <p>Director of Operations</p>
+                        </div>
+                    </div>
+                    <div class="contact-details">
+                        <p><strong>Email:</strong> john.doe@example.com</p>
+                        <p><strong>Phone:</strong> +1 (555) 019-2834</p>
+                    </div>
+                    <button class="action-btn" id="target-element">Add to Target List</button>
+                    <!-- Simulated highlighted element overlay -->
+                    <div class="element-highlight pulse-border" id="highlight-box"></div>
+                </div>
+            </div>
+
+            <!-- 2. Interactive "Figma-like" Cursor -->
+            <div class="ai-cursor hidden" id="ai-cursor">
+                <!-- Golden custom pointer arrow -->
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" class="cursor-arrow">
+                    <path d="M5.5 3.5L19 12L12 14L9 21L5.5 3.5Z" fill="#FACC15" stroke="#000000" stroke-width="1.5" stroke-linejoin="round"/>
+                </svg>
+                <div class="cursor-tooltip">
+                    <span class="tooltip-name">Jumeau AI</span>
+                    <span class="tooltip-text" id="cursor-question">I see the phone number here. Should I include it in the Notion sync as well?</span>
+                </div>
+            </div>
+
+            <!-- 1. Voice Receptor Pill Container -->
+            <div class="voice-receptor-wrapper">
+                
+                <!-- Default State Pill -->
+                <div class="voice-pill default-state" id="pill-default">
+                    <span class="prompt-text">Click or hold <span class="pink-text">fn</span> to start dictating</span>
+                </div>
+                
+                <!-- Sub Pill for Default State -->
+                <div class="sub-pill default-state" id="sub-pill-default">
+                    <div class="dots-container">
+                        <div class="dot"></div><div class="dot"></div><div class="dot"></div>
+                        <div class="dot"></div><div class="dot"></div><div class="dot"></div>
+                        <div class="dot"></div><div class="dot"></div><div class="dot"></div>
+                    </div>
+                </div>
+
+                <!-- Recording State Pill -->
+                <div class="voice-pill recording-state hidden" id="pill-recording">
+                    <button class="pill-btn close-btn" id="btn-close-record">
+                        <svg viewBox="0 0 24 24" fill="none" class="icon-close">
+                            <path d="M18 6L6 18M6 6l12 12" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                    </button>
+                    
+                    <div class="audio-visualizer">
+                        <div class="bar"></div><div class="bar"></div><div class="bar"></div>
+                        <div class="bar"></div><div class="bar"></div><div class="bar"></div>
+                        <div class="bar"></div><div class="bar"></div><div class="bar"></div>
+                        <div class="bar"></div><div class="bar"></div><div class="bar"></div>
+                    </div>
+                    
+                    <button class="pill-btn stop-btn" id="btn-stop-record">
+                        <div class="stop-square"></div>
+                    </button>
+                </div>
+
+            </div>
+        </main>
+
+        <!-- 3. Live Streaming Workflow Panel -->
+        <aside class="workflow-sidebar">
+            <div class="sidebar-header">
+                <h3>Building Workflow</h3>
+                <div class="recording-dot pulse"></div>
+            </div>
+            
+            <div class="workflow-log" id="workflow-log">
+                <!-- Log steps will be injected here via JavaScript -->
+            </div>
+            
+            <!-- Hidden code block that will fade in at the end -->
+            <div class="code-preview-container hidden" id="code-preview">
+                <pre><code class="language-html">
+&lt;div class="watermark"&gt;
+  Report ready to export to Notion.
+&lt;/div&gt;
+                </code></pre>
+            </div>
+        </aside>
+    </div>
+
+    <!-- Injecting JS -->
+    <script src="script.js"></script>
+</body>
+</html>
