@@ -45,7 +45,17 @@
     }
   ],
   "options_page": "options/index.html",
+  "icons": {
+    "16": "assets/logo_small.jpeg",
+    "48": "assets/logo.jpeg",
+    "128": "assets/logo.jpeg"
+  },
   "action": {
-    "default_title": "Ouvrir les paramètres de Jumeau"
+    "default_title": "Ouvrir les paramètres de Jumeau",
+    "default_icon": {
+      "16": "assets/logo_small.jpeg",
+      "48": "assets/logo.jpeg",
+      "128": "assets/logo.jpeg"
+    }
   }
 }

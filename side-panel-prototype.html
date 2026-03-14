@@ -1,443 +1,489 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="fr">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Side Panel Prototype</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
-    <script src="https://unpkg.com/lucide@latest"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
     <style>
-        :root {
-            --bg-page: #ffffff;
-            --bg-panel: #fbfbfd;
-            --border-color: #e5e5e5;
-            --text-main: #111827;
-            --text-muted: #6b7280;
-            --accent: #0f172a;
-            --accent-light: #f1f5f9;
-            --bubble-user: #0f172a;
-            --bubble-agent: #f3f4f6;
-            --bubble-agent-text: #111827;
-            --font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-        }
+      :root {
+        --bg-page: #ffffff;
+        --bg-panel: #fbfbfd;
+        --border-color: #e5e5e5;
+        --text-main: #111827;
+        --text-muted: #6b7280;
+        --accent: #0f172a;
+        --accent-light: #f1f5f9;
+        --bubble-user: #0f172a;
+        --bubble-agent: #f3f4f6;
+        --bubble-agent-text: #111827;
+        --font-family: "Inter", -apple-system, BlinkMacSystemFont, sans-serif;
+      }
 
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-        }
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
 
-        body {
-            font-family: var(--font-family);
-            background-color: var(--bg-page);
-            color: var(--text-main);
-            height: 100vh;
-            display: flex;
-            overflow: hidden;
-            -webkit-font-smoothing: antialiased;
-        }
+      body {
+        font-family: var(--font-family);
+        background-color: var(--bg-page);
+        color: var(--text-main);
+        height: 100vh;
+        display: flex;
+        overflow: hidden;
+        -webkit-font-smoothing: antialiased;
+      }
 
-        /* Side Panel */
-        .side-panel {
-            width: 25vw;
-            min-width: 320px;
-            max-width: 400px;
-            height: 100vh;
-            background-color: var(--bg-panel);
-            border-right: 1px solid var(--border-color);
-            display: flex;
-            flex-direction: column;
-            box-shadow: 2px 0 20px rgba(0, 0, 0, 0.03);
-            z-index: 10;
-        }
+      /* Side Panel */
+      .side-panel {
+        width: 25vw;
+        min-width: 320px;
+        max-width: 400px;
+        height: 100vh;
+        background-color: var(--bg-panel);
+        border-right: 1px solid var(--border-color);
+        display: flex;
+        flex-direction: column;
+        box-shadow: 2px 0 20px rgba(0, 0, 0, 0.03);
+        z-index: 10;
+      }
 
-        /* Main Empty Area */
-        .main-area {
-            flex: 1;
-            background-color: var(--bg-page);
-        }
+      /* Main Empty Area */
+      .main-area {
+        flex: 1;
+        background-color: var(--bg-page);
+      }
 
-        /* Header & Toggle */
-        .panel-header {
-            padding: 24px 24px 16px 24px;
-            border-bottom: 1px solid rgba(0,0,0,0.06);
-            flex-shrink: 0;
-            background: rgba(251, 251, 253, 0.8);
-            backdrop-filter: blur(12px);
-        }
+      /* Header & Toggle */
+      .panel-header {
+        padding: 24px 24px 16px 24px;
+        border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+        flex-shrink: 0;
+        background: rgba(251, 251, 253, 0.8);
+        backdrop-filter: blur(12px);
+      }
 
-        .segmented-control {
-            display: flex;
-            background: #e2e4e9;
-            border-radius: 10px;
-            padding: 4px;
-            position: relative;
-        }
+      .segmented-control {
+        display: flex;
+        background: #e2e4e9;
+        border-radius: 10px;
+        padding: 4px;
+        position: relative;
+      }
 
-        .segment-btn {
-            flex: 1;
-            background: transparent;
-            border: none;
-            padding: 8px 12px;
-            font-size: 13px;
-            font-weight: 600;
-            color: #64748b;
-            cursor: pointer;
-            z-index: 2;
-            transition: color 0.3s ease;
-            text-align: center;
-        }
+      .segment-btn {
+        flex: 1;
+        background: transparent;
+        border: none;
+        padding: 8px 12px;
+        font-size: 13px;
+        font-weight: 600;
+        color: #64748b;
+        cursor: pointer;
+        z-index: 2;
+        transition: color 0.3s ease;
+        text-align: center;
+      }
 
-        .segment-btn.active {
-            color: var(--text-main);
-        }
+      .segment-btn.active {
+        color: var(--text-main);
+      }
 
-        .segment-indicator {
-            position: absolute;
-            top: 4px;
-            left: 4px;
-            width: calc(50% - 4px);
-            height: calc(100% - 8px);
-            background: white;
-            border-radius: 6px;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.04);
-            transition: transform 0.3s cubic-bezier(0.25, 1, 0.5, 1);
-            z-index: 1;
-        }
+      .segment-indicator {
+        position: absolute;
+        top: 4px;
+        left: 4px;
+        width: calc(50% - 4px);
+        height: calc(100% - 8px);
+        background: white;
+        border-radius: 6px;
+        box-shadow:
+          0 1px 3px rgba(0, 0, 0, 0.08),
+          0 1px 2px rgba(0, 0, 0, 0.04);
+        transition: transform 0.3s cubic-bezier(0.25, 1, 0.5, 1);
+        z-index: 1;
+      }
 
-        /* Content Area */
-        .panel-content {
-            flex: 1;
-            overflow-y: auto;
-            position: relative;
-            padding: 24px;
-        }
+      /* Content Area */
+      .panel-content {
+        flex: 1;
+        overflow-y: auto;
+        position: relative;
+        padding: 24px;
+      }
 
-        .view-section {
-            display: none;
-            min-height: 100%;
-        }
+      .view-section {
+        display: none;
+        min-height: 100%;
+      }
 
-        .view-section.active {
-            display: block;
-            animation: fadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-        }
+      .view-section.active {
+        display: block;
+        animation: fadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+      }
 
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(8px); }
-            to { opacity: 1; transform: translateY(0); }
+      @keyframes fadeIn {
+        from {
+          opacity: 0;
+          transform: translateY(8px);
         }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
 
-        /* Actions View */
-        .action-list {
-            display: flex;
-            flex-direction: column;
-            gap: 24px;
-        }
+      /* Actions View */
+      .action-list {
+        display: flex;
+        flex-direction: column;
+        gap: 24px;
+      }
 
-        .action-item {
-            display: flex;
-            align-items: flex-start;
-            gap: 16px;
-            animation: slideIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-            opacity: 0;
-        }
+      .action-item {
+        display: flex;
+        align-items: flex-start;
+        gap: 16px;
+        animation: slideIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        opacity: 0;
+      }
 
-        .action-icon {
-            width: 32px;
-            height: 32px;
-            border-radius: 10px;
-            background: white;
-            border: 1px solid #e2e8f0;
-            color: var(--text-main);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            flex-shrink: 0;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.02);
-        }
-        
-        .action-icon svg {
-            width: 16px;
-            height: 16px;
-        }
+      .action-icon {
+        width: 32px;
+        height: 32px;
+        border-radius: 10px;
+        background: white;
+        border: 1px solid #e2e8f0;
+        color: var(--text-main);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
+      }
 
-        .action-icon.loading svg {
-            animation: spin 3s linear infinite;
-        }
+      .action-icon svg {
+        width: 16px;
+        height: 16px;
+      }
 
-        @keyframes spin {
-            100% { transform: rotate(360deg); }
-        }
+      .action-icon.loading svg {
+        animation: spin 3s linear infinite;
+      }
 
-        .action-details {
-            display: flex;
-            flex-direction: column;
-            gap: 6px;
-            flex: 1;
-            padding-top: 2px;
+      @keyframes spin {
+        100% {
+          transform: rotate(360deg);
         }
+      }
 
-        .action-title {
-            font-size: 14px;
-            font-weight: 600;
-            color: var(--text-main);
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
+      .action-details {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        flex: 1;
+        padding-top: 2px;
+      }
 
-        .action-time {
-            font-size: 11px;
-            color: #9ca3af;
-            font-weight: 500;
-        }
+      .action-title {
+        font-size: 14px;
+        font-weight: 600;
+        color: var(--text-main);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
 
-        .action-stream {
-            font-size: 12px;
-            color: var(--text-muted);
-            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-            line-height: 1.5;
-            background: #f1f5f9;
-            padding: 8px 12px;
-            border-radius: 8px;
-            border: 1px solid #e2e8f0;
-            position: relative;
-        }
+      .action-time {
+        font-size: 11px;
+        color: #9ca3af;
+        font-weight: 500;
+      }
 
-        /* Typing Indicator inside actions */
-        .typing-indicator.action {
-            display: inline-flex;
-            gap: 3px;
-            align-items: center;
-            height: 14px;
-            margin-left: 4px;
-        }
+      .action-stream {
+        font-size: 12px;
+        color: var(--text-muted);
+        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+        line-height: 1.5;
+        background: #f1f5f9;
+        padding: 8px 12px;
+        border-radius: 8px;
+        border: 1px solid #e2e8f0;
+        position: relative;
+      }
 
-        /* Chat View */
-        .chat-list {
-            display: flex;
-            flex-direction: column;
-            gap: 24px;
-        }
+      /* Typing Indicator inside actions */
+      .typing-indicator.action {
+        display: inline-flex;
+        gap: 3px;
+        align-items: center;
+        height: 14px;
+        margin-left: 4px;
+      }
 
-        .chat-bubble-container {
-            display: flex;
-            flex-direction: column;
-            max-width: 88%;
-            animation: slideIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-            opacity: 0;
-        }
+      /* Chat View */
+      .chat-list {
+        display: flex;
+        flex-direction: column;
+        gap: 24px;
+      }
 
-        .chat-bubble-container.user {
-            align-self: flex-end;
-            align-items: flex-end;
-        }
+      .chat-bubble-container {
+        display: flex;
+        flex-direction: column;
+        max-width: 88%;
+        animation: slideIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        opacity: 0;
+      }
 
-        .chat-bubble-container.assistant {
-            align-self: flex-start;
-            align-items: flex-start;
-        }
+      .chat-bubble-container.user {
+        align-self: flex-end;
+        align-items: flex-end;
+      }
 
-        .chat-bubble {
-            padding: 12px 16px;
-            border-radius: 18px;
-            font-size: 14px;
-            line-height: 1.5;
-            position: relative;
-            box-shadow: 0 1px 2px rgba(0,0,0,0.05);
-        }
+      .chat-bubble-container.assistant {
+        align-self: flex-start;
+        align-items: flex-start;
+      }
 
-        .user .chat-bubble {
-            background-color: var(--bubble-user);
-            color: white;
-            border-bottom-right-radius: 4px;
-        }
+      .chat-bubble {
+        padding: 12px 16px;
+        border-radius: 18px;
+        font-size: 14px;
+        line-height: 1.5;
+        position: relative;
+        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+      }
 
-        .assistant .chat-bubble {
-            background-color: var(--bubble-agent);
-            color: var(--bubble-agent-text);
-            border-bottom-left-radius: 4px;
-            border: 1px solid #e5e7eb;
-        }
+      .user .chat-bubble {
+        background-color: var(--bubble-user);
+        color: white;
+        border-bottom-right-radius: 4px;
+      }
 
-        .chat-meta {
-            font-size: 11px;
-            color: #9ca3af;
-            font-weight: 500;
-            margin-top: 8px;
-            display: flex;
-            align-items: center;
-            gap: 6px;
-        }
+      .assistant .chat-bubble {
+        background-color: var(--bubble-agent);
+        color: var(--bubble-agent-text);
+        border-bottom-left-radius: 4px;
+        border: 1px solid #e5e7eb;
+      }
 
-        @keyframes slideIn {
-            from { opacity: 0; transform: translateY(12px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
+      .chat-meta {
+        font-size: 11px;
+        color: #9ca3af;
+        font-weight: 500;
+        margin-top: 8px;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+      }
 
-        .typing-dots {
-            display: flex;
-            gap: 5px;
-            align-items: center;
-            height: 20px;
-            padding: 0 4px;
+      @keyframes slideIn {
+        from {
+          opacity: 0;
+          transform: translateY(12px);
         }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
 
-        .dot {
-            width: 6px;
-            height: 6px;
-            background-color: currentColor;
-            border-radius: 50%;
-            opacity: 0.4;
-            animation: bounce 1.4s infinite ease-in-out both;
-        }
+      .typing-dots {
+        display: flex;
+        gap: 5px;
+        align-items: center;
+        height: 20px;
+        padding: 0 4px;
+      }
 
-        .dot:nth-child(1) { animation-delay: -0.32s; }
-        .dot:nth-child(2) { animation-delay: -0.16s; }
-        
-        @keyframes bounce {
-            0%, 80%, 100% { transform: scale(0); opacity: 0.4; }
-            40% { transform: scale(1); opacity: 1; }
-        }
+      .dot {
+        width: 6px;
+        height: 6px;
+        background-color: currentColor;
+        border-radius: 50%;
+        opacity: 0.4;
+        animation: bounce 1.4s infinite ease-in-out both;
+      }
 
-        /* Scrollbar */
-        ::-webkit-scrollbar {
-            width: 5px;
-        }
-        ::-webkit-scrollbar-track {
-            background: transparent;
-        }
-        ::-webkit-scrollbar-thumb {
-            background: #cbd5e1;
-            border-radius: 10px;
-        }
-        ::-webkit-scrollbar-thumb:hover {
-            background: #94a3b8;
-        }
+      .dot:nth-child(1) {
+        animation-delay: -0.32s;
+      }
+      .dot:nth-child(2) {
+        animation-delay: -0.16s;
+      }
 
-        /* Floating Input for Chat (Bottom) */
-        .chat-input-area {
-            position: absolute;
-            bottom: 0;
-            left: 0;
-            right: 0;
-            padding: 16px 24px 24px 24px;
-            background: linear-gradient(180deg, rgba(251, 251, 253, 0) 0%, rgba(251, 251, 253, 1) 20%);
-            display: none;
+      @keyframes bounce {
+        0%,
+        80%,
+        100% {
+          transform: scale(0);
+          opacity: 0.4;
         }
+        40% {
+          transform: scale(1);
+          opacity: 1;
+        }
+      }
 
-        .view-section.active .chat-input-area {
-            /* display: block; */ /* disabled as requested "juste les bulles" */
-        }
+      /* Scrollbar */
+      ::-webkit-scrollbar {
+        width: 5px;
+      }
+      ::-webkit-scrollbar-track {
+        background: transparent;
+      }
+      ::-webkit-scrollbar-thumb {
+        background: #cbd5e1;
+        border-radius: 10px;
+      }
+      ::-webkit-scrollbar-thumb:hover {
+        background: #94a3b8;
+      }
+
+      /* Floating Input for Chat (Bottom) */
+      .chat-input-area {
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        padding: 16px 24px 24px 24px;
+        background: linear-gradient(180deg, rgba(251, 251, 253, 0) 0%, rgba(251, 251, 253, 1) 20%);
+        display: none;
+      }
+
+      .view-section.active .chat-input-area {
+        /* display: block; */ /* disabled as requested "juste les bulles" */
+      }
     </style>
-</head>
-<body>
-
+  </head>
+  <body>
     <!-- SIDE PANEL -->
     <aside class="side-panel">
-        <div class="panel-header">
-            <div class="segmented-control">
-                <div class="segment-indicator" id="segment-indicator"></div>
-                <button class="segment-btn active" onclick="switchTab('actions')" id="tab-actions">Actions</button>
-                <button class="segment-btn" onclick="switchTab('chat')" id="tab-chat">Transcription</button>
-            </div>
+      <div class="panel-header">
+        <div class="segmented-control">
+          <div class="segment-indicator" id="segment-indicator"></div>
+          <button class="segment-btn active" onclick="switchTab('actions')" id="tab-actions">Actions</button>
+          <button class="segment-btn" onclick="switchTab('chat')" id="tab-chat">Transcription</button>
+        </div>
+      </div>
+
+      <div class="panel-content" id="panel-scroll">
+        <!-- ACTIONS VIEW -->
+        <div class="view-section active" id="view-actions">
+          <div class="action-list" id="action-list">
+            <!-- Actions will be injected here -->
+          </div>
         </div>
 
-        <div class="panel-content" id="panel-scroll">
-            
-            <!-- ACTIONS VIEW -->
-            <div class="view-section active" id="view-actions">
-                <div class="action-list" id="action-list">
-                    <!-- Actions will be injected here -->
-                </div>
-            </div>
-
-            <!-- CHAT VIEW -->
-            <div class="view-section" id="view-chat">
-                <div class="chat-list" id="chat-list">
-                    <!-- Chat bubbles will be injected here -->
-                </div>
-                <!-- Chat Bottom Padding space -->
-                <div style="height: 20px;"></div>
-            </div>
-
+        <!-- CHAT VIEW -->
+        <div class="view-section" id="view-chat">
+          <div class="chat-list" id="chat-list">
+            <!-- Chat bubbles will be injected here -->
+          </div>
+          <!-- Chat Bottom Padding space -->
+          <div style="height: 20px"></div>
         </div>
+      </div>
     </aside>
 
     <!-- MAIN AREA (Blank) -->
     <main class="main-area">
-        <!-- The page is left intentionally blank as requested (1/4 or 1/5 screen) -->
+      <!-- The page is left intentionally blank as requested (1/4 or 1/5 screen) -->
     </main>
 
     <script>
-        // Init Lucide Icons
-        lucide.createIcons();
+      // Init Lucide Icons
+      lucide.createIcons();
 
-        // --- Tab Switching Logic ---
-        function switchTab(tab) {
-            const indicator = document.getElementById('segment-indicator');
-            const tabActions = document.getElementById('tab-actions');
-            const tabChat = document.getElementById('tab-chat');
-            const viewActions = document.getElementById('view-actions');
-            const viewChat = document.getElementById('view-chat');
+      // --- Tab Switching Logic ---
+      function switchTab(tab) {
+        const indicator = document.getElementById("segment-indicator");
+        const tabActions = document.getElementById("tab-actions");
+        const tabChat = document.getElementById("tab-chat");
+        const viewActions = document.getElementById("view-actions");
+        const viewChat = document.getElementById("view-chat");
 
-            if (tab === 'actions') {
-                indicator.style.transform = 'translateX(0)';
-                tabActions.classList.add('active');
-                tabChat.classList.remove('active');
-                viewActions.classList.add('active');
-                viewChat.classList.remove('active');
-            } else {
-                indicator.style.transform = 'translateX(100%)';
-                tabChat.classList.add('active');
-                tabActions.classList.remove('active');
-                viewChat.classList.add('active');
-                viewActions.classList.remove('active');
-            }
-            scrollToBottom();
+        if (tab === "actions") {
+          indicator.style.transform = "translateX(0)";
+          tabActions.classList.add("active");
+          tabChat.classList.remove("active");
+          viewActions.classList.add("active");
+          viewChat.classList.remove("active");
+        } else {
+          indicator.style.transform = "translateX(100%)";
+          tabChat.classList.add("active");
+          tabActions.classList.remove("active");
+          viewChat.classList.add("active");
+          viewActions.classList.remove("active");
         }
+        scrollToBottom();
+      }
 
-        // --- Simulated Streaming Data ---
-        const actionsData = [
-            { type: 'action', title: 'Context Analysis', stream: 'Reading current document DOM structure...', time: '13:51', icon: 'scan' },
-            { type: 'action', title: 'Web Search', stream: 'Query: "chrome extension side panel API"\nFound 3 relevant results.', time: '13:51', icon: 'globe' },
-            { type: 'action', title: 'Code Generation', stream: 'const port = chrome.runtime.connect();\nport.postMessage("init");...', time: '13:52', icon: 'terminal', isStreaming: true }
-        ];
+      // --- Simulated Streaming Data ---
+      const actionsData = [
+        {
+          type: "action",
+          title: "Context Analysis",
+          stream: "Reading current document DOM structure...",
+          time: "13:51",
+          icon: "scan",
+        },
+        {
+          type: "action",
+          title: "Web Search",
+          stream: 'Query: "chrome extension side panel API"\nFound 3 relevant results.',
+          time: "13:51",
+          icon: "globe",
+        },
+        {
+          type: "action",
+          title: "Code Generation",
+          stream: 'const port = chrome.runtime.connect();\nport.postMessage("init");...',
+          time: "13:52",
+          icon: "terminal",
+          isStreaming: true,
+        },
+      ];
 
-        const chatData = [
-            { sender: 'user', text: "Can you analyze the structure of this page and suggest improvements?", time: '13:50' },
-            { sender: 'assistant', text: "I'll start by checking the document's layout and accessibility tags.", time: '13:51' },
-            { sender: 'user', text: "Also check if we can make the side panel full height.", time: '13:51' },
-            { sender: 'assistant', isTyping: true, time: '13:52' }
-        ];
+      const chatData = [
+        { sender: "user", text: "Can you analyze the structure of this page and suggest improvements?", time: "13:50" },
+        {
+          sender: "assistant",
+          text: "I'll start by checking the document's layout and accessibility tags.",
+          time: "13:51",
+        },
+        { sender: "user", text: "Also check if we can make the side panel full height.", time: "13:51" },
+        { sender: "assistant", isTyping: true, time: "13:52" },
+      ];
 
-        // --- Render Helpers ---
-        const actionList = document.getElementById('action-list');
-        const chatList = document.getElementById('chat-list');
-        const panelScroll = document.getElementById('panel-scroll');
+      // --- Render Helpers ---
+      const actionList = document.getElementById("action-list");
+      const chatList = document.getElementById("chat-list");
+      const panelScroll = document.getElementById("panel-scroll");
 
-        function scrollToBottom() {
-            setTimeout(() => {
-                panelScroll.scrollTo({
-                    top: panelScroll.scrollHeight,
-                    behavior: 'smooth'
-                });
-            }, 50);
-        }
+      function scrollToBottom() {
+        setTimeout(() => {
+          panelScroll.scrollTo({
+            top: panelScroll.scrollHeight,
+            behavior: "smooth",
+          });
+        }, 50);
+      }
 
-        // Render Actions
-        function renderActions() {
-            actionList.innerHTML = '';
-            actionsData.forEach((action, i) => {
-                
-                const streamContent = action.isStreaming 
-                    ? `${action.stream.replace(/\n/g, '<br/>')} <span class="typing-indicator action"><span class="dot"></span><span class="dot"></span><span class="dot"></span></span>`
-                    : action.stream.replace(/\n/g, '<br/>');
+      // Render Actions
+      function renderActions() {
+        actionList.innerHTML = "";
+        actionsData.forEach((action, i) => {
+          const streamContent = action.isStreaming
+            ? `${action.stream.replace(/\n/g, "<br/>")} <span class="typing-indicator action"><span class="dot"></span><span class="dot"></span><span class="dot"></span></span>`
+            : action.stream.replace(/\n/g, "<br/>");
 
-                const loadingClass = action.isStreaming ? 'loading' : '';
+          const loadingClass = action.isStreaming ? "loading" : "";
 
-                const html = `
+          const html = `
                     <div class="action-item" style="animation-delay: ${i * 0.1}s">
                         <div class="action-icon ${loadingClass}">
                             ${action.isStreaming ? '<i data-lucide="loader-2"></i>' : `<i data-lucide="${action.icon}"></i>`}
@@ -451,29 +497,31 @@
                         </div>
                     </div>
                 `;
-                actionList.insertAdjacentHTML('beforeend', html);
-            });
-            lucide.createIcons();
-            scrollToBottom();
-        }
+          actionList.insertAdjacentHTML("beforeend", html);
+        });
+        lucide.createIcons();
+        scrollToBottom();
+      }
 
-        // Render Chat
-        function renderChat() {
-            chatList.innerHTML = '';
-            chatData.forEach((msg, i) => {
-                const isUser = msg.sender === 'user';
-                
-                let bubbleContent = '';
-                if (msg.isTyping) {
-                    bubbleContent = `<div class="typing-dots"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div>`;
-                } else {
-                    bubbleContent = msg.text;
-                }
+      // Render Chat
+      function renderChat() {
+        chatList.innerHTML = "";
+        chatData.forEach((msg, i) => {
+          const isUser = msg.sender === "user";
 
-                const icon = isUser ? '<i data-lucide="user" style="width:12px;height:12px;"></i>' : '<i data-lucide="sparkles" style="width:12px;height:12px;"></i>';
-                const senderName = isUser ? 'You' : 'Agent';
+          let bubbleContent = "";
+          if (msg.isTyping) {
+            bubbleContent = `<div class="typing-dots"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div>`;
+          } else {
+            bubbleContent = msg.text;
+          }
 
-                const html = `
+          const icon = isUser
+            ? '<i data-lucide="user" style="width:12px;height:12px;"></i>'
+            : '<i data-lucide="sparkles" style="width:12px;height:12px;"></i>';
+          const senderName = isUser ? "You" : "Agent";
+
+          const html = `
                     <div class="chat-bubble-container ${msg.sender}" style="animation-delay: ${i * 0.1}s">
                         <div class="chat-bubble">
                             ${bubbleContent}
@@ -483,33 +531,43 @@
                         </div>
                     </div>
                 `;
-                chatList.insertAdjacentHTML('beforeend', html);
-            });
-            lucide.createIcons();
-            scrollToBottom();
-        }
+          chatList.insertAdjacentHTML("beforeend", html);
+        });
+        lucide.createIcons();
+        scrollToBottom();
+      }
 
-        // Initial Render
+      // Initial Render
+      renderActions();
+      renderChat();
+
+      // Simulate streaming updates for demo purposes
+      setTimeout(() => {
+        // Update action stream
+        actionsData[2].stream = "Code generation complete.\nApplying changes to virtual DOM...";
         renderActions();
+
+        // Update chat
+        chatData[chatData.length - 1] = {
+          sender: "assistant",
+          text: "I've reviewed the DOM and I'm currently applying the styling for the side panel so it takes the full remaining height. You should see the changes applied in real-time.",
+          time: "13:52",
+        };
         renderChat();
+      }, 3000);
 
-        // Simulate streaming updates for demo purposes
-        setTimeout(() => {
-            // Update action stream
-            actionsData[2].stream = "Code generation complete.\nApplying changes to virtual DOM...";
-            renderActions();
-            
-            // Update chat
-            chatData[chatData.length - 1] = { sender: 'assistant', text: "I've reviewed the DOM and I'm currently applying the styling for the side panel so it takes the full remaining height. You should see the changes applied in real-time.", time: '13:52' };
-            renderChat();
-        }, 3000);
-
-        setTimeout(() => {
-            actionsData[2].isStreaming = false;
-            actionsData.push({ type: 'action', title: 'Layout Update', stream: 'Updating flexbox layout styles', time: '13:52', icon: 'layout', isStreaming: true });
-            renderActions();
-        }, 5000);
-
+      setTimeout(() => {
+        actionsData[2].isStreaming = false;
+        actionsData.push({
+          type: "action",
+          title: "Layout Update",
+          stream: "Updating flexbox layout styles",
+          time: "13:52",
+          icon: "layout",
+          isStreaming: true,
+        });
+        renderActions();
+      }, 5000);
     </script>
-</body>
+  </body>
 </html>

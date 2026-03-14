@@ -1,29 +1,58 @@
-<!DOCTYPE html>
+<!doctype html>
 <html>
-<head>
-    <meta charset="UTF-8">
+  <head>
+    <meta charset="UTF-8" />
     <title>Jumeau - Live Canvas</title>
-    <link rel="stylesheet" href="sidepanel.css">
-</head>
-<body>
+    <link rel="stylesheet" href="sidepanel.css" />
+  </head>
+  <body>
     <div class="canvas-header">
-        <h1>Live Canvas</h1>
-        <div id="ai-status" class="status-indicator">
-            <span class="dot"></span> Prêt
+      <div class="header-left">
+        <h1>Jumeau</h1>
+        <div id="ai-status" class="status-indicator"><span class="dot"></span> Prêt</div>
+      </div>
+      <button id="openAppBtn" class="secondary-btn">Ouvrir l'App</button>
+    </div>
+
+    <div class="tabs-container">
+        <div class="segmented-control">
+            <div class="segment-indicator" id="segment-indicator"></div>
+            <button class="segment-btn active" id="tab-actions">Canvas</button>
+            <button class="segment-btn" id="tab-transcription">Transcription</button>
         </div>
     </div>
 
-    <div class="canvas-body" id="nodes-container">
-        <!-- Les bulles/nodes de workflow s'ajouteront ici -->
-        <div class="empty-state" id="empty-msg">
-            <p>Cliquez sur l'icône micro sur la page web courante et commandez l'IA avec la voix.</p>
+    <div class="canvas-body" id="panel-scroll">
+        <!-- ACTIONS VIEW -->
+        <div class="view-section active" id="view-actions">
+            <div class="section-label">Workflow live</div>
+            <div class="workflow-board" id="workflow-board">
+                <div class="empty-state">Le workflow en cours apparaîtra ici.</div>
+            </div>
+
+            <div class="section-label">Questions ouvertes</div>
+            <div class="questions-board" id="questions-board">
+                <div class="empty-state">Les questions de clarification apparaîtront ici.</div>
+            </div>
+
+            <div class="section-label">Journal</div>
+            <div class="action-list" id="action-list">
+                <div class="empty-state">Aucune action pour le moment.</div>
+            </div>
         </div>
+
+      <!-- TRANSCRIPTION VIEW -->
+      <div class="view-section" id="view-transcription">
+        <div class="chat-list" id="chat-list">
+          <div class="empty-state">La transcription apparaîtra ici.</div>
+        </div>
+      </div>
     </div>
 
     <div class="canvas-footer">
-        <button id="exportBtn" disabled>Exporter le Blueprint</button>
+      <button id="exportBtn" disabled>Exporter le Blueprint</button>
     </div>
 
     <script src="sidepanel.js"></script>
-</body>
+  </body>
 </html>

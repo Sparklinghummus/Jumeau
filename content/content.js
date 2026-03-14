@@ -56,22 +56,54 @@ function injectPill() {
         }
     });
 
+    // Event listener pour muter le micro (Touche 'm' ou 'M')
+    document.addEventListener('keydown', (e) => {
+        // Ignorer si l'utilisateur tape dans un champ de texte
+        if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.isContentEditable) {
+            return;
+        }
+        
+        if (e.key === 'm' || e.key === 'M') {
+            sendRuntimeMessage({ type: 'TOGGLE_MUTE' }, (response) => {
+                if (chrome.runtime.lastError) {
+                    console.error("Erreur toggle mute:", chrome.runtime.lastError);
+                    return;
+                }
+                
+                if (response && response.isMuted !== undefined) {
+                    if (response.isMuted) {
+                        pill.style.opacity = '';
+                        pill.classList.add('muted');
+                        tooltip.textContent = 'Micro Coupé (M pour réactiver)';
+                    } else {
+                        pill.classList.remove('muted');
+                        tooltip.textContent = 'Option + Espace pour arrêter';
+                    }
+                }
+            });
+        }
+    });
+
     let isConnecting = false;
     let isRuntimeInvalidated = false;
 
-    function handleRuntimeInvalidation(error) {
+    function handleRuntimeInvalidation() {
+        if (isRuntimeInvalidated) return;
         isConnecting = false;
         isRuntimeInvalidated = true;
         isPillActive = false;
         updatePillUI(pill, false);
         pill.title = "Extension rechargée. Recharge cette page pour réactiver Jumeau.";
         tooltip.textContent = 'Rechargez la page pour réactiver Jumeau';
-        console.error("Contexte d'extension invalide :", error);
+        console.log("Jumeau : Contexte d'extension invalide (extension rechargée). Veuillez rafraîchir la page.");
+        
+        pill.style.opacity = '0.5';
+        pill.style.pointerEvents = 'none';
     }
 
     function sendRuntimeMessage(message, callback) {
         if (isRuntimeInvalidated) {
-            handleRuntimeInvalidation(new Error('Extension context invalidated'));
+            handleRuntimeInvalidation();
             return;
         }
 
@@ -79,7 +111,7 @@ function injectPill() {
             chrome.runtime.sendMessage(message, callback);
         } catch (error) {
             if (String(error?.message || error).includes('Extension context invalidated')) {
-                handleRuntimeInvalidation(error);
+                handleRuntimeInvalidation();
                 return;
             }
 
@@ -92,6 +124,16 @@ function injectPill() {
         isConnecting = true;
         console.log("Demande de toggle audio...");
         sendRuntimeMessage({ type: 'TOGGLE_AUDIO' }, (response) => {
+            if (chrome.runtime.lastError) {
+                if (chrome.runtime.lastError.message.includes('Extension context invalidated')) {
+                    handleRuntimeInvalidation();
+                } else {
+                    console.error("Erreur toggle audio:", chrome.runtime.lastError.message);
+                }
+                isConnecting = false;
+                return;
+            }
+
             isConnecting = false;
             if (response && typeof response.isRecording !== 'undefined') {
                 isPillActive = response.isRecording;
@@ -121,11 +163,27 @@ function injectPill() {
                 sendResponse({ success: false, error: err.message });
             });
             return true; // Asynchrone
+        } else if (message.type === 'EXECUTE_CURSOR_COMMANDS') {
+            executeCursorCommands(message.commands).then(() => {
+                sendResponse({ success: true });
+            }).catch(err => {
+                sendResponse({ success: false, error: err.message });
+            });
+            return true;
         }
     });
 
     // Check initial state
     sendRuntimeMessage({ type: 'GET_AUDIO_STATE' }, (response) => {
+        if (chrome.runtime.lastError) {
+            if (chrome.runtime.lastError.message.includes('Extension context invalidated')) {
+                handleRuntimeInvalidation();
+            } else {
+                console.error("Erreur get audio state:", chrome.runtime.lastError.message);
+            }
+            return;
+        }
+
         if (response && typeof response.isRecording !== 'undefined') {
             isPillActive = response.isRecording;
             updatePillUI(pill, isPillActive);
@@ -201,12 +259,21 @@ async function processImageWithGrid(base64Image) {
                 const canvas = document.createElement('canvas');
                 const ctx = canvas.getContext('2d');
                 
-                // Dimensionner le canvas à la taille de l'image
-                canvas.width = img.width;
-                canvas.height = img.height;
+                // Réduire la résolution pour limiter la taille du payload (max 1024px de large)
+                const MAX_WIDTH = 1024;
+                let targetWidth = img.width;
+                let targetHeight = img.height;
+                if (targetWidth > MAX_WIDTH) {
+                    const scale = MAX_WIDTH / targetWidth;
+                    targetWidth = MAX_WIDTH;
+                    targetHeight = Math.round(img.height * scale);
+                }
                 
-                // Dessiner l'image originale
-                ctx.drawImage(img, 0, 0);
+                canvas.width = targetWidth;
+                canvas.height = targetHeight;
+                
+                // Dessiner l'image originale (redimensionnée)
+                ctx.drawImage(img, 0, 0, targetWidth, targetHeight);
                 
                 // Configuration de la grille 8x8
                 const rows = 8;
@@ -215,10 +282,10 @@ async function processImageWithGrid(base64Image) {
                 const cellHeight = canvas.height / rows;
                 
                 ctx.strokeStyle = 'rgba(239, 68, 68, 0.8)'; // Rouge vif
-                ctx.lineWidth = 2;
+                ctx.lineWidth = 1;
                 
                 // Taille de police proportionnelle à la hauteur de la cellule
-                const fontSize = Math.max(14, Math.floor(cellHeight / 5));
+                const fontSize = Math.max(10, Math.floor(cellHeight / 5));
                 ctx.font = `bold ${fontSize}px sans-serif`;
                 ctx.textAlign = 'center';
                 ctx.textBaseline = 'middle';
@@ -239,7 +306,7 @@ async function processImageWithGrid(base64Image) {
                         
                         // Fond semi-transparent pour la lisibilité
                         const textWidth = ctx.measureText(label).width;
-                        const padding = 6;
+                        const padding = 4;
                         const bgWidth = textWidth + padding * 2;
                         const bgHeight = fontSize + padding * 2;
                         
@@ -257,12 +324,10 @@ async function processImageWithGrid(base64Image) {
                     }
                 }
                 
-                const finalDataUrl = canvas.toDataURL('image/jpeg', 0.8);
+                // Qualité réduite pour un payload léger (~30-80KB au lieu de 300-600KB)
+                const finalDataUrl = canvas.toDataURL('image/jpeg', 0.5);
                 
-                // Log de l'image modifiée dans la console 
-                console.log('%c++++++++++++ GRILLE SPATIALE 8x8 ++++++++++++', 'color: #ef4444; font-weight: bold; font-size: 16px;');
-                console.log('%c ', `font-size: 400px; background: url(${finalDataUrl}) no-repeat; background-size: contain; padding: 200px 400px;`);
-                console.log("Image de l'UI traitée avec grille spatiale. Prête pour l'IA.");
+                console.log("Image traitée avec grille spatiale, taille:", Math.round(finalDataUrl.length / 1024), "KB");
                 
                 resolve(finalDataUrl);
             } catch (e) {
@@ -272,4 +337,79 @@ async function processImageWithGrid(base64Image) {
         img.onerror = () => reject(new Error("Erreur lors du chargement de l'image dans le canvas"));
         img.src = base64Image;
     });
+}
+
+// ============================================================================
+// LOGIQUE DU CURSEUR VIRTUEL
+// ============================================================================
+let virtualCursor = null;
+
+function getOrCreateCursor() {
+    if (!virtualCursor) {
+        virtualCursor = document.createElement('div');
+        virtualCursor.id = 'jumeau-virtual-cursor';
+        virtualCursor.innerHTML = `<svg width="32" height="32" viewBox="0 0 128 128" fill="none" xmlns="http://www.w3.org/2000/svg">
+<path d="M10.2188 13.5547C9.31555 11.4472 11.4472 9.31555 13.5547 10.2188L116.459 54.3213C118.769 55.3112 118.392 58.6957 115.921 59.1533L72.4443 67.2051C69.7814 67.6983 67.6983 69.7814 67.2051 72.4443L59.1533 115.921C58.6957 118.392 55.3112 118.769 54.3213 116.459L10.2188 13.5547Z" fill="#469AF9" stroke="white" stroke-width="4"/>
+</svg>`;
+        virtualCursor.style.position = 'fixed';
+        virtualCursor.style.top = '0px';
+        virtualCursor.style.left = '0px';
+        virtualCursor.style.zIndex = '2147483647';
+        virtualCursor.style.pointerEvents = 'none';
+        virtualCursor.style.transition = 'top 0.4s cubic-bezier(0.25, 1, 0.5, 1), left 0.4s cubic-bezier(0.25, 1, 0.5, 1)';
+        virtualCursor.style.filter = 'drop-shadow(0 2px 6px rgba(0,0,0,0.4))';
+        virtualCursor.style.width = '32px';
+        virtualCursor.style.height = '32px';
+        virtualCursor.style.lineHeight = '0';
+        document.body.appendChild(virtualCursor);
+    }
+    return virtualCursor;
+}
+
+function getCellCoordinates(cellId) {
+    if (!cellId || cellId.length < 2) return null;
+    
+    cellId = cellId.toUpperCase();
+    const colStr = cellId.charAt(0);
+    const rowStr = cellId.substring(1);
+    
+    // A=0, B=1, ... H=7
+    const colIndex = colStr.charCodeAt(0) - 65; 
+    const rowIndex = parseInt(rowStr) - 1;
+    
+    if (colIndex < 0 || colIndex > 7 || isNaN(rowIndex) || rowIndex < 0 || rowIndex > 7) {
+        return null;
+    }
+    
+    const cellWidth = window.innerWidth / 8;
+    const cellHeight = window.innerHeight / 8;
+    
+    const centerX = (colIndex * cellWidth) + (cellWidth / 2);
+    const centerY = (rowIndex * cellHeight) + (cellHeight / 2);
+    
+    return { x: centerX, y: centerY };
+}
+
+async function executeCursorCommands(commands) {
+    if (!commands || !commands.length) return;
+    
+    const cursor = getOrCreateCursor();
+    
+    for (const cmdObj of commands) {
+        const cmdStr = cmdObj.command;
+        console.log("Exécution commande curseur:", cmdStr, "Raison:", cmdObj.reason);
+        
+        if (cmdStr.startsWith("cursor move_to ")) {
+            const cellId = cmdStr.split(" ")[2];
+            if (!cellId) continue;
+            
+            const coords = getCellCoordinates(cellId);
+            if (coords) {
+                cursor.style.left = `${coords.x}px`;
+                cursor.style.top = `${coords.y}px`;
+                // Attendre la fin de l'animation
+                await new Promise(r => setTimeout(r, 450));
+            }
+        }
+    }
 }

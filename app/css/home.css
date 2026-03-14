@@ -1,0 +1,161 @@
+/* ============================================
+   HOME PAGE STYLES
+   ============================================ */
+
+.home-page {
+    padding: 48px 71px;
+    max-width: 1000px;
+    margin: 0 auto;
+}
+
+/* Greeting */
+.home-greeting h1 {
+    font-size: 28px;
+    font-weight: 600;
+    line-height: 36px;
+    color: var(--text-primary);
+    margin-bottom: 4px;
+}
+
+.home-greeting p {
+    font-size: 16px;
+    font-weight: 400;
+    line-height: 24px;
+    letter-spacing: -0.3125px;
+    color: var(--text-secondary);
+    margin-bottom: 32px;
+}
+
+/* Quick Action Cards */
+.home-quick-actions {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+    margin-bottom: 48px;
+}
+
+.quick-action-card {
+    background-color: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-2xl);
+    padding: 20px;
+    cursor: pointer;
+    transition: box-shadow 0.2s ease, transform 0.15s ease;
+}
+
+.quick-action-card:hover {
+    box-shadow: var(--shadow-sm);
+    transform: translateY(-1px);
+}
+
+.quick-action-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 16px;
+}
+
+.quick-action-icon--workflows {
+    background-color: #d0fae5;
+}
+
+.quick-action-icon--notes {
+    background-color: var(--badge-bg);
+}
+
+.quick-action-icon--skills {
+    background-color: #ede9fe;
+}
+
+.quick-action-icon svg {
+    width: 20px;
+    height: 20px;
+}
+
+.quick-action-card h3 {
+    font-size: 16px;
+    font-weight: 500;
+    line-height: 24px;
+    letter-spacing: -0.3125px;
+    color: var(--text-primary);
+    margin-bottom: 2px;
+}
+
+.quick-action-card p {
+    font-size: 14px;
+    font-weight: 400;
+    line-height: 21px;
+    letter-spacing: -0.1504px;
+    color: var(--text-secondary);
+}
+
+/* Recent Activity */
+.home-recent-activity {
+    margin-top: 8px;
+}
+
+.home-recent-activity .section-label {
+    margin-bottom: 16px;
+}
+
+.activity-list {
+    display: flex;
+    flex-direction: column;
+}
+
+.activity-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 0;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.activity-item:last-child {
+    border-bottom: none;
+}
+
+.activity-icon {
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    color: var(--text-secondary);
+}
+
+.activity-icon svg {
+    width: 18px;
+    height: 18px;
+}
+
+.activity-text {
+    flex: 1;
+    font-size: 14px;
+    font-weight: 400;
+    line-height: 21px;
+    letter-spacing: -0.1504px;
+    color: var(--text-primary);
+}
+
+.activity-time {
+    font-size: 13px;
+    font-weight: 400;
+    line-height: 19.5px;
+    letter-spacing: -0.0762px;
+    color: var(--text-secondary);
+    flex-shrink: 0;
+}
+
+.section-label {
+    font-size: 11px;
+    font-weight: 400;
+    line-height: 16.5px;
+    letter-spacing: 0.6145px;
+    text-transform: uppercase;
+    color: var(--text-secondary);
+}

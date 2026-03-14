@@ -1,26 +1,33 @@
 body {
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
     margin: 0;
     padding: 0;
     display: flex;
     flex-direction: column;
     height: 100vh;
-    background-color: #f8fafc;
-    color: #1e293b;
+    background-color: #fbfbfd;
+    color: #111827;
 }
 
 .canvas-header {
-    padding: 16px;
+    padding: 12px 16px;
     background-color: white;
-    border-bottom: 1px solid #e2e8f0;
+    border-bottom: 1px solid #e5e5e5;
     display: flex;
     justify-content: space-between;
     align-items: center;
     flex-shrink: 0;
+    z-index: 10;
+}
+
+.header-left {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
 }
 
 h1 {
-    font-size: 16px;
+    font-size: 15px;
     margin: 0;
     font-weight: 600;
 }
@@ -28,14 +35,14 @@ h1 {
 .status-indicator {
     display: flex;
     align-items: center;
-    font-size: 13px;
+    font-size: 12px;
     gap: 6px;
-    color: #64748b;
+    color: #6b7280;
 }
 
 .dot {
-    width: 8px;
-    height: 8px;
+    width: 7px;
+    height: 7px;
     border-radius: 50%;
     background-color: #cbd5e1;
 }
@@ -50,62 +57,405 @@ h1 {
     animation: blink-dot 1s infinite;
 }
 
+/* Tabs System */
+.tabs-container {
+    padding: 12px 16px;
+    background: white;
+    border-bottom: 1px solid #e5e5e5;
+}
+
+.segmented-control {
+    display: flex;
+    background: #e2e4e9;
+    border-radius: 10px;
+    padding: 3px;
+    position: relative;
+    width: 100%;
+}
+
+.segment-btn {
+    flex: 1;
+    background: transparent;
+    border: none;
+    padding: 7px 12px;
+    font-size: 13px;
+    font-weight: 500;
+    color: #64748b;
+    cursor: pointer;
+    z-index: 2;
+    transition: color 0.2s ease;
+    text-align: center;
+    border-radius: 7px;
+}
+
+.segment-btn.active {
+    color: #111827;
+}
+
+.segment-indicator {
+    position: absolute;
+    top: 3px;
+    left: 3px;
+    width: calc(50% - 3px);
+    height: calc(100% - 6px);
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+    transition: transform 0.3s cubic-bezier(0.25, 1, 0.5, 1);
+    z-index: 1;
+}
+
+/* Content Area */
 .canvas-body {
     flex-grow: 1;
-    padding: 20px;
     overflow-y: auto;
     display: flex;
     flex-direction: column;
-    gap: 12px;
+    position: relative;
+}
+
+.view-section {
+    display: none;
+    padding: 16px;
+    animation: fadeIn 0.3s ease-out forwards;
+}
+
+.view-section.active {
+    display: block;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
 }
 
 .empty-state {
     text-align: center;
     color: #94a3b8;
-    font-size: 14px;
-    margin-top: 40px;
+    font-size: 13px;
+    padding: 40px 20px;
 }
 
-/* Styles pour les Blueprint Nodes */
-.node {
+.section-label {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: #94a3b8;
+    margin-bottom: 12px;
+}
+
+/* Actions List */
+.action-list {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.workflow-board,
+.questions-board {
+    margin-bottom: 18px;
+}
+
+.workflow-card {
+    background:
+        radial-gradient(circle at top right, rgba(59, 130, 246, 0.12), transparent 36%),
+        linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
+    border: 1px solid #dbe7ff;
+    border-radius: 18px;
+    padding: 16px;
+    box-shadow: 0 10px 24px rgba(15, 23, 42, 0.06);
+}
+
+.workflow-card-topline {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 10px;
+}
+
+.workflow-chip {
+    display: inline-flex;
+    align-items: center;
+    padding: 4px 8px;
+    border-radius: 999px;
+    background: #111827;
+    color: white;
+    font-size: 11px;
+    font-weight: 600;
+}
+
+.workflow-chip--muted {
+    background: #e5eefc;
+    color: #315288;
+}
+
+.workflow-card h2 {
+    font-size: 19px;
+    line-height: 1.15;
+    margin: 0 0 8px;
+}
+
+.workflow-card-copy {
+    margin: 0 0 14px;
+    font-size: 13px;
+    line-height: 1.5;
+    color: #4b5563;
+}
+
+.workflow-meta {
+    display: grid;
+    gap: 10px;
+    margin-bottom: 14px;
+}
+
+.workflow-meta-item {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+}
+
+.workflow-meta-label {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: #94a3b8;
+}
+
+.workflow-meta-value {
+    font-size: 13px;
+    color: #1f2937;
+}
+
+.workflow-nodes-stack {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.workflow-node-card {
+    background: rgba(255, 255, 255, 0.82);
+    border: 1px solid #e5edf9;
+    border-radius: 14px;
+    padding: 12px;
+}
+
+.workflow-node-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 8px;
+}
+
+.workflow-node-step {
+    font-size: 11px;
+    font-weight: 700;
+    color: #64748b;
+}
+
+.workflow-node-type {
+    display: inline-flex;
+    align-items: center;
+    padding: 3px 8px;
+    border-radius: 999px;
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    background: #eef2ff;
+    color: #4f46e5;
+}
+
+.workflow-node-type--observe {
+    background: #e0f2fe;
+    color: #0369a1;
+}
+
+.workflow-node-type--trigger {
+    background: #dcfce7;
+    color: #15803d;
+}
+
+.workflow-node-type--decision {
+    background: #fef3c7;
+    color: #b45309;
+}
+
+.workflow-node-type--output {
+    background: #fce7f3;
+    color: #be185d;
+}
+
+.workflow-node-type--question {
+    background: #ede9fe;
+    color: #6d28d9;
+}
+
+.workflow-node-card-title {
+    font-size: 13px;
+    font-weight: 600;
+    color: #111827;
+    margin-bottom: 6px;
+}
+
+.workflow-node-card-desc {
+    font-size: 12px;
+    line-height: 1.5;
+    color: #6b7280;
+}
+
+.questions-board {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.question-card {
     background: white;
     border: 1px solid #e2e8f0;
-    border-radius: 8px;
+    border-radius: 14px;
     padding: 12px;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
-    animation: slide-in 0.3s ease-out;
-    position: relative;
 }
 
-.node::before {
-    content: '';
-    position: absolute;
-    top: -12px;
-    left: 24px;
-    width: 2px;
-    height: 12px;
-    background-color: #cbd5e1;
-}
-.node:first-child::before {
-    display: none;
-}
-
-.node-title {
-    font-weight: 600;
-    font-size: 14px;
-    margin-bottom: 4px;
-}
-
-.node-desc {
+.question-card-title {
     font-size: 13px;
-    color: #64748b;
-    margin: 0;
+    font-weight: 600;
+    color: #111827;
+    margin-bottom: 6px;
 }
 
+.question-card-context {
+    font-size: 12px;
+    line-height: 1.45;
+    color: #6b7280;
+    margin-bottom: 10px;
+}
+
+.question-chip-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.question-chip {
+    display: inline-flex;
+    align-items: center;
+    padding: 5px 9px;
+    border-radius: 999px;
+    background: #f1f5f9;
+    color: #334155;
+    font-size: 11px;
+    font-weight: 600;
+}
+
+.empty-inline {
+    font-size: 12px;
+    color: #94a3b8;
+    padding: 4px 0;
+}
+
+.action-item {
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+}
+
+.action-icon {
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    background: white;
+    border: 1px solid #e5e5e5;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    color: #111827;
+}
+
+.action-icon svg {
+    width: 16px;
+    height: 16px;
+}
+
+.action-details {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.action-title {
+    font-size: 13px;
+    font-weight: 600;
+    color: #111827;
+}
+
+.action-stream {
+    font-size: 12px;
+    color: #6b7280;
+    background: #f1f5f9;
+    padding: 8px 10px;
+    border-radius: 8px;
+    border: 1px solid #e2e8f0;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+}
+
+/* Chat Bubbles */
+.chat-list {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.chat-bubble-container {
+    display: flex;
+    flex-direction: column;
+    max-width: 90%;
+}
+
+.chat-bubble-container.user {
+    align-self: flex-end;
+}
+
+.chat-bubble-container.assistant {
+    align-self: flex-start;
+}
+
+.chat-bubble {
+    padding: 10px 14px;
+    border-radius: 16px;
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+.user .chat-bubble {
+    background-color: #0f172a;
+    color: white;
+    border-bottom-right-radius: 4px;
+}
+
+.assistant .chat-bubble {
+    background-color: #f3f4f6;
+    color: #111827;
+    border-bottom-left-radius: 4px;
+    border: 1px solid #e5e7eb;
+}
+
+.chat-meta {
+    font-size: 11px;
+    color: #9ca3af;
+    margin-top: 4px;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+/* Footer & Buttons */
 .canvas-footer {
     padding: 16px;
     background-color: white;
-    border-top: 1px solid #e2e8f0;
+    border-top: 1px solid #e5e5e5;
     flex-shrink: 0;
 }
 
@@ -115,10 +465,10 @@ button {
     background-color: #3b82f6;
     color: white;
     border: none;
-    border-radius: 6px;
+    border-radius: 8px;
     font-weight: 600;
     cursor: pointer;
-    transition: background-color 0.2s;
+    transition: all 0.2s;
 }
 
 button:hover:not(:disabled) {
@@ -126,13 +476,23 @@ button:hover:not(:disabled) {
 }
 
 button:disabled {
-    background-color: #94a3b8;
+    background-color: #e2e8f0;
+    color: #94a3b8;
     cursor: not-allowed;
 }
 
-@keyframes slide-in {
-    from { opacity: 0; transform: translateY(10px); }
-    to { opacity: 1; transform: translateY(0); }
+.secondary-btn {
+    width: auto;
+    padding: 5px 10px;
+    background-color: transparent;
+    color: #3b82f6;
+    border: 1px solid #3b82f6;
+    font-size: 12px;
+    font-weight: 500;
+}
+
+.secondary-btn:hover {
+    background-color: #eff6ff;
 }
 
 @keyframes pulse-dot {
@@ -144,4 +504,15 @@ button:disabled {
 @keyframes blink-dot {
     0%, 100% { opacity: 1; }
     50% { opacity: 0.3; }
+}
+
+::-webkit-scrollbar {
+    width: 4px;
+}
+::-webkit-scrollbar-track {
+    background: transparent;
+}
+::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 10px;
 }

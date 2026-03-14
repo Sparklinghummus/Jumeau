@@ -10,6 +10,8 @@ let sourceNode = null;
 let workletNode = null;
 let silentGainNode = null;
 
+let isMuted = false;
+
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     if (message.target !== 'offscreen') return;
 
@@ -21,6 +23,10 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     } else if (message.type === 'STOP_RECORDING') {
         stopPlaybackAndRecording();
         sendResponse({ ok: true });
+    } else if (message.type === 'TOGGLE_MUTE') {
+        isMuted = !isMuted;
+        console.log("Microphone muted state:", isMuted);
+        sendResponse({ ok: true, isMuted: isMuted });
     } else if (message.type === 'PLAY_AUDIO') {
         // message.data contains base64 PCM16 data from Gemini
         playAudioData(message.data);
@@ -62,6 +68,8 @@ async function startRecording() {
         silentGainNode.gain.value = 0;
 
         workletNode.port.onmessage = (event) => {
+            if (isMuted) return; // Mute state: on n'envoie pas le chunk
+
             const float32Array = event.data;
             const downsampled = downsampleBuffer(float32Array, audioContext.sampleRate, TARGET_SAMPLE_RATE);
             
@@ -99,6 +107,8 @@ async function startRecording() {
     }
 }
 
+let nextPlayTime = 0; // Ajout d'une variable pour gérer la file d'attente audio
+
 function stopPlaybackAndRecording() {
     if (workletNode) {
         workletNode.port.onmessage = null;
@@ -121,6 +131,7 @@ function stopPlaybackAndRecording() {
         audioContext.close().catch(() => {});
     }
     audioContext = null;
+    nextPlayTime = 0; // Réinitialiser le temps de lecture
     console.log("Capture audio PCM arrêtée.");
 }
 
@@ -128,6 +139,7 @@ function stopPlaybackAndRecording() {
 async function playAudioData(base64PcmString) {
     if (!audioContext || audioContext.state === 'closed') {
         audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        nextPlayTime = audioContext.currentTime;
     }
 
     // Décoder Base64 vers ArrayBuffer
@@ -157,9 +169,18 @@ async function playAudioData(base64PcmString) {
     // Reprendre le contexte si suspendu (sécurité navigateur)
     if (audioContext.state === 'suspended') {
         await audioContext.resume();
+        nextPlayTime = Math.max(nextPlayTime, audioContext.currentTime);
     }
     
-    source.start();
+    // --- GESTION DE LA FILE D'ATTENTE (Éviter le son haché) ---
+    // Si la file d'attente est vide ou en retard, on se laisse une marge
+    // un peu plus grande (ex: 100ms) pour absorber les micro-coupures réseau
+    if (nextPlayTime < audioContext.currentTime + 0.1) {
+        nextPlayTime = audioContext.currentTime + 0.1;
+    }
+    
+    source.start(nextPlayTime);
+    nextPlayTime += audioBufferParams.duration;
 }
 
 

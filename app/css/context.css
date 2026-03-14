@@ -1,0 +1,445 @@
+/* ============================================
+   CONTEXT PAGE STYLES
+   ============================================ */
+
+.context-page {
+    padding: 48px 71px;
+    max-width: 1050px;
+}
+
+/* Header */
+.context-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    margin-bottom: 40px;
+}
+
+.context-header-left {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.context-header-icon {
+    width: 44px;
+    height: 44px;
+    background-color: var(--bg-dark);
+    border-radius: var(--radius-2xl);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.context-header-icon svg {
+    width: 20px;
+    height: 20px;
+    color: var(--text-light);
+}
+
+.context-header-info h1 {
+    font-size: 24px;
+    font-weight: 500;
+    line-height: 36px;
+    letter-spacing: 0.0703px;
+    color: var(--text-primary);
+}
+
+.context-header-info p {
+    font-size: 14px;
+    font-weight: 400;
+    line-height: 21px;
+    letter-spacing: -0.1504px;
+    color: var(--text-secondary);
+}
+
+.context-sync {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    font-weight: 400;
+    line-height: 19.5px;
+    letter-spacing: -0.0762px;
+    color: var(--text-secondary);
+    margin-top: 4px;
+}
+
+.context-sync .sync-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background-color: var(--accent-green-bright);
+}
+
+/* Stat Cards */
+.context-stats {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+    margin-bottom: 32px;
+}
+
+.stat-card {
+    background-color: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-2xl);
+    padding: 16px;
+    position: relative;
+}
+
+.stat-card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 12px;
+}
+
+.stat-card-icon {
+    width: 32px;
+    height: 32px;
+    border-radius: var(--radius-lg);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.stat-card-icon svg {
+    width: 16px;
+    height: 16px;
+}
+
+.stat-card-arrow {
+    width: 14px;
+    height: 14px;
+    color: var(--text-secondary);
+}
+
+.stat-card-arrow svg {
+    width: 14px;
+    height: 14px;
+}
+
+.stat-card-number {
+    font-size: 24px;
+    font-weight: 400;
+    line-height: 36px;
+    letter-spacing: 0.0703px;
+    color: var(--text-primary);
+    margin-bottom: 4px;
+}
+
+.stat-card-label {
+    font-size: 13px;
+    font-weight: 400;
+    line-height: 19.5px;
+    letter-spacing: -0.0762px;
+    color: var(--text-secondary);
+    margin-bottom: 6px;
+}
+
+.stat-card-change {
+    font-size: 12px;
+    font-weight: 400;
+    line-height: 18px;
+    color: var(--text-green);
+}
+
+/* Context Map + Skill Radar Row */
+.context-charts-row {
+    display: flex;
+    gap: 16px;
+    margin-bottom: 32px;
+}
+
+/* Context Map */
+.context-map-card {
+    flex: 1;
+    background-color: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-2xl);
+    padding: 21px;
+    min-width: 0;
+}
+
+.context-map-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 16px;
+}
+
+.context-map-header h2 {
+    font-size: 16px;
+    font-weight: 400;
+    line-height: 24px;
+    letter-spacing: -0.3125px;
+    color: var(--text-primary);
+}
+
+.context-map-header p {
+    font-size: 13px;
+    font-weight: 400;
+    line-height: 19.5px;
+    letter-spacing: -0.0762px;
+    color: var(--text-secondary);
+}
+
+.chart-legend {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.legend-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    font-weight: 400;
+    line-height: 18px;
+    color: var(--text-secondary);
+    text-transform: capitalize;
+}
+
+.legend-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
+/* Context Graph Visualization */
+.context-graph {
+    width: 100%;
+    height: 360px;
+    border-radius: var(--radius-xl);
+    position: relative;
+    overflow: hidden;
+    background-color: #faf8f5;
+}
+
+.graph-node {
+    position: absolute;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+}
+
+.graph-node-dot {
+    border-radius: 50%;
+    border: 2px solid transparent;
+    opacity: 0.85;
+    transition: transform 0.2s ease, opacity 0.2s ease;
+}
+
+.graph-node:hover .graph-node-dot {
+    transform: scale(1.2);
+    opacity: 1;
+}
+
+.graph-node-label {
+    font-size: 12px;
+    font-weight: 400;
+    line-height: 18px;
+    color: var(--text-secondary);
+    white-space: nowrap;
+    padding: 3px 6px;
+    border-radius: var(--radius-md);
+}
+
+/* Skill Radar */
+.skill-radar-card {
+    width: 376px;
+    flex-shrink: 0;
+    background-color: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-2xl);
+    padding: 21px;
+    display: flex;
+    flex-direction: column;
+}
+
+.skill-radar-header {
+    margin-bottom: 16px;
+}
+
+.skill-radar-header h2 {
+    font-size: 16px;
+    font-weight: 400;
+    line-height: 24px;
+    letter-spacing: -0.3125px;
+    color: var(--text-primary);
+}
+
+.skill-radar-header p {
+    font-size: 13px;
+    font-weight: 400;
+    line-height: 19.5px;
+    letter-spacing: -0.0762px;
+    color: var(--text-secondary);
+}
+
+.radar-chart-container {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+}
+
+.radar-chart-container canvas {
+    width: 100%;
+    max-width: 280px;
+    height: auto;
+}
+
+.radar-legend {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    margin-top: 8px;
+}
+
+.radar-legend .legend-dot {
+    width: 8px;
+    height: 8px;
+}
+
+.radar-legend span {
+    font-size: 12px;
+    font-weight: 400;
+    line-height: 18px;
+    color: var(--text-secondary);
+}
+
+/* Working Style + Latest Insights */
+.context-insights-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+}
+
+.insights-card {
+    background-color: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-2xl);
+    padding: 21px;
+}
+
+.insights-card-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 16px;
+}
+
+.insights-card-header svg {
+    width: 16px;
+    height: 16px;
+    color: var(--text-secondary);
+}
+
+.insights-card-header h2 {
+    font-size: 16px;
+    font-weight: 400;
+    line-height: 24px;
+    letter-spacing: -0.3125px;
+    color: var(--text-primary);
+}
+
+/* Working Style Items */
+.working-style-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.working-style-item {
+    display: flex;
+    gap: 12px;
+    padding: 12px;
+    border-radius: var(--radius-xl);
+}
+
+.working-style-icon {
+    width: 32px;
+    height: 32px;
+    border-radius: var(--radius-lg);
+    background-color: var(--bg-secondary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.working-style-icon svg {
+    width: 16px;
+    height: 16px;
+    color: var(--text-secondary);
+}
+
+.working-style-info h4 {
+    font-size: 14px;
+    font-weight: 400;
+    line-height: 21px;
+    letter-spacing: -0.1504px;
+    color: var(--text-primary);
+    margin-bottom: 2px;
+}
+
+.working-style-info p {
+    font-size: 13px;
+    font-weight: 400;
+    line-height: 19.5px;
+    letter-spacing: -0.0762px;
+    color: var(--text-secondary);
+}
+
+/* Latest Insights Items */
+.insights-list {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.insight-item {
+    display: flex;
+    gap: 10px;
+}
+
+.insight-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background-color: var(--accent-green-bright);
+    flex-shrink: 0;
+    margin-top: 7px;
+}
+
+.insight-content p {
+    font-size: 14px;
+    font-weight: 400;
+    line-height: 21px;
+    letter-spacing: -0.1504px;
+    color: var(--text-primary);
+    margin-bottom: 4px;
+}
+
+.insight-content .insight-time {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 12px;
+    font-weight: 400;
+    line-height: 18px;
+    color: var(--text-secondary);
+}
+
+.insight-content .insight-time svg {
+    width: 12px;
+    height: 12px;
+}

@@ -1,7 +1,7 @@
 /* Isolés dans le Shadow DOM */
 .jumeau-container {
     position: fixed;
-    bottom: 30px;
+    bottom: 15px; /* Pill rabaissée */
     left: 50%;
     transform: translateX(-50%);
     display: flex;
@@ -127,3 +127,26 @@
     50% { height: 18px; }
     100% { height: 8px; }
 }
+
+/* État 'muet' (Muted) */
+.jumeau-pill.active.muted {
+    background: rgba(180, 80, 20, 0.7);
+    border: 1px solid rgba(255, 120, 40, 0.4);
+    box-shadow: 0 0 15px rgba(249, 115, 22, 0.4), 
+                0 4px 12px rgba(0, 0, 0, 0.2), 
+                inset 0 0 8px rgba(249, 115, 22, 0.3);
+}
+
+.jumeau-pill.active.muted .bar {
+    background-color: #fdba74;
+    box-shadow: 0 0 4px rgba(253, 186, 116, 0.8);
+    animation: none; /* Stope la vague */
+    transition: height 0.4s ease-out; /* Douce transition quand l'animation s'arrête */
+}
+
+/* Figer les barres dans leur état de repos (comme le hover inactif) */
+.jumeau-pill.active.muted .bar:nth-child(1) { height: 6px; }
+.jumeau-pill.active.muted .bar:nth-child(2) { height: 12px; }
+.jumeau-pill.active.muted .bar:nth-child(3) { height: 16px; }
+.jumeau-pill.active.muted .bar:nth-child(4) { height: 10px; }
+.jumeau-pill.active.muted .bar:nth-child(5) { height: 5px; }
