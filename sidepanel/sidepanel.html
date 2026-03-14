@@ -11,7 +11,23 @@
         <h1>Jumeau</h1>
         <div id="ai-status" class="status-indicator"><span class="dot"></span> Prêt</div>
       </div>
-      <button id="openAppBtn" class="secondary-btn">Ouvrir l'App</button>
+      <div class="header-actions">
+        <button
+          id="clearContextBtn"
+          class="secondary-btn danger-btn icon-btn"
+          aria-label="Vider le contexte"
+          title="Vider le contexte"
+        >
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M3 6h18" />
+            <path d="M8 6V4h8v2" />
+            <path d="M19 6l-1 14H6L5 6" />
+            <path d="M10 11v6" />
+            <path d="M14 11v6" />
+          </svg>
+        </button>
+        <button id="openAppBtn" class="secondary-btn">Ouvrir l'App</button>
+      </div>
     </div>
 
     <div class="tabs-container">

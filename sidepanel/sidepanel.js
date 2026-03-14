@@ -7,6 +7,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const questionsBoard = document.getElementById('questions-board');
     const exportBtn = document.getElementById('exportBtn');
     const openAppBtn = document.getElementById('openAppBtn');
+    const clearContextBtn = document.getElementById('clearContextBtn');
 
     const tabActions = document.getElementById('tab-actions');
     const tabTranscription = document.getElementById('tab-transcription');
@@ -236,6 +237,50 @@ document.addEventListener('DOMContentLoaded', () => {
 
     openAppBtn.addEventListener('click', () => {
         chrome.tabs.create({ url: chrome.runtime.getURL('app/index.html#workflows') });
+    });
+
+    clearContextBtn.addEventListener('click', () => {
+        const shouldClear = window.confirm(
+            'Effacer le workflow, le journal et la transcription, puis fermer la session de contexte en cours ?'
+        );
+
+        if (!shouldClear) {
+            return;
+        }
+
+        clearContextBtn.disabled = true;
+        const previousTitle = clearContextBtn.title;
+        clearContextBtn.title = 'Réinitialisation...';
+        clearContextBtn.setAttribute('aria-label', 'Réinitialisation...');
+
+        canvasState = normalizeState();
+        renderCanvasState();
+        switchTab('actions');
+
+        chrome.runtime.sendMessage({ type: 'CLEAR_LIVE_CONTEXT' }, (response) => {
+            clearContextBtn.disabled = false;
+            clearContextBtn.title = previousTitle;
+            clearContextBtn.setAttribute('aria-label', previousTitle);
+
+            if (chrome.runtime.lastError) {
+                alert(`Impossible de vider le contexte : ${chrome.runtime.lastError.message}`);
+                hydrateInitialState();
+                return;
+            }
+
+            if (response?.state) {
+                canvasState = normalizeState(response.state);
+                renderCanvasState();
+            }
+
+            if (response?.status) {
+                updateStatus(response.status);
+            }
+
+            if (!response?.ok) {
+                alert(response?.error || 'Impossible de vider le contexte.');
+            }
+        });
     });
 
     chrome.runtime.onMessage.addListener((message) => {

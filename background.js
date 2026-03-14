@@ -184,6 +184,13 @@ async function mutateLiveCanvasState(mutator) {
     return result;
 }
 
+async function clearLiveCanvasState() {
+    await ensureLiveCanvasStateReady();
+    liveCanvasState = createEmptyLiveCanvasState();
+    await syncLiveCanvasState();
+    return cloneLiveCanvasState();
+}
+
 function createCanvasAction(action) {
     return {
         id: createEntityId('action'),
@@ -682,19 +689,20 @@ async function connectToGeminiLive() {
 
             const wsUrl = `${GEMINI_LIVE_ENDPOINT}?key=${apiKey}`;
             
-            geminiWs = new WebSocket(wsUrl);
+            const ws = new WebSocket(wsUrl);
+            geminiWs = ws;
             geminiSessionReady = false;
             connectTimeout = setTimeout(() => {
                 console.error("⛔️ Timeout de connexion Gemini Live. Le serveur n'a jamais envoyé 'setupComplete'.");
                 try {
-                    geminiWs?.close();
+                    ws.close();
                 } catch (_) {}
                 settleWithError(new Error("Timeout de connexion Gemini Live"));
             }, GEMINI_CONNECT_TIMEOUT_MS);
 
             // Hook the send method to log outbound messages
-            const originalWsSend = geminiWs.send.bind(geminiWs);
-            geminiWs.send = (data) => {
+            const originalWsSend = ws.send.bind(ws);
+            ws.send = (data) => {
                 try {
                     const parsed = JSON.parse(data);
                     logLaunch('Outbound Gemini payload', summarizeGeminiPayload(parsed));
@@ -702,7 +710,10 @@ async function connectToGeminiLive() {
                 originalWsSend(data);
             };
 
-            geminiWs.onopen = () => {
+            ws.onopen = () => {
+                if (geminiWs !== ws) {
+                    return;
+                }
                 console.error("🟢 [WS OPEN] Socket Gemini Live ouverte ! Envoi du setupMessage...");
                 
                 // Envoi du message Setup initial
@@ -830,10 +841,13 @@ RÈGLES CRITIQUES :
                 };
                 
                 logLaunch('Gemini setup prepared', summarizeGeminiPayload(setupMessage));
-                geminiWs.send(JSON.stringify(setupMessage));
+                ws.send(JSON.stringify(setupMessage));
             };
 
-            geminiWs.onmessage = async (event) => {
+            ws.onmessage = async (event) => {
+                if (geminiWs !== ws) {
+                    return;
+                }
                 // Gemini peut renvoyer du binaire ou du JSON en string
                 try {
                     let textData = event.data;
@@ -924,14 +938,20 @@ RÈGLES CRITIQUES :
                 }
             };
 
-            geminiWs.onerror = (error) => {
+            ws.onerror = (error) => {
+                if (geminiWs !== ws) {
+                    return;
+                }
                 console.error("🔴 [WS ERROR] Erreur WebSocket Gemini (peut être une erreur 400 mauvaise clé ou modèle):", error.message || error);
                 if (!geminiSessionReady) {
                     settleWithError(new Error("Échec de connexion à Gemini Live"));
                 }
             };
 
-            geminiWs.onclose = (event) => {
+            ws.onclose = (event) => {
+                if (geminiWs !== ws) {
+                    return;
+                }
                 const msg = `⚫️ [WS CLOSED] Connexion Gemini Live fermée. Code: ${event.code}, Raison: ${event.reason || "Non spécifiée"}`;
                 console.error(msg);
                 geminiSessionReady = false;
@@ -978,6 +998,41 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
           })
           .catch((error) => {
               sendResponse({ error: error.message });
+          });
+      return true;
+  }
+
+  else if (message.type === 'CLEAR_LIVE_CONTEXT') {
+      Promise.resolve()
+          .then(() => {
+              const wasRecording = isRecording;
+
+              if (wasRecording) {
+                  stopAudioCapture();
+              } else {
+                  sendSidepanelStatus('ready');
+              }
+
+              return clearLiveCanvasState().then((clearedState) => ({
+                  clearedState,
+                  wasRecording
+              }));
+          })
+          .then(({ clearedState, wasRecording }) => {
+              sendResponse({
+                  ok: true,
+                  state: clearedState,
+                  status: 'ready',
+                  wasRecording
+              });
+          })
+          .catch((error) => {
+              sendResponse({
+                  ok: false,
+                  error: toUserErrorMessage(error),
+                  state: cloneLiveCanvasState(),
+                  status: isRecording ? 'listening' : 'ready'
+              });
           });
       return true;
   }

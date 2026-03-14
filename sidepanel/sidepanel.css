@@ -26,6 +26,12 @@ body {
     gap: 2px;
 }
 
+.header-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
 h1 {
     font-size: 15px;
     margin: 0;
@@ -491,8 +497,44 @@ button:disabled {
     font-weight: 500;
 }
 
+.icon-btn {
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.icon-btn svg {
+    width: 15px;
+    height: 15px;
+    stroke: currentColor;
+    stroke-width: 2;
+    fill: none;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+
 .secondary-btn:hover {
     background-color: #eff6ff;
+}
+
+.danger-btn {
+    color: #dc2626;
+    border-color: #fecaca;
+    background-color: #fff5f5;
+}
+
+.danger-btn:hover:not(:disabled) {
+    background-color: #fee2e2;
+    border-color: #fca5a5;
+}
+
+.danger-btn:disabled {
+    background-color: #f8fafc;
+    border-color: #e2e8f0;
+    color: #94a3b8;
 }
 
 @keyframes pulse-dot {
