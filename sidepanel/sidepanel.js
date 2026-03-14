@@ -235,7 +235,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     openAppBtn.addEventListener('click', () => {
-        chrome.tabs.create({ url: chrome.runtime.getURL('app/index.html') });
+        chrome.tabs.create({ url: chrome.runtime.getURL('app/index.html#workflows') });
     });
 
     chrome.runtime.onMessage.addListener((message) => {

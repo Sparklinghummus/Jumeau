@@ -9,8 +9,39 @@ let mediaStream = null;
 let sourceNode = null;
 let workletNode = null;
 let silentGainNode = null;
+let playbackEndTimer = null;
+let isPlaybackActive = false;
 
 let isMuted = false;
+
+function notifyPlaybackStarted() {
+    if (isPlaybackActive) return;
+    isPlaybackActive = true;
+    chrome.runtime.sendMessage({ type: 'PLAYBACK_STARTED' }).catch(() => {});
+}
+
+function notifyPlaybackEnded() {
+    if (!isPlaybackActive) return;
+    isPlaybackActive = false;
+    chrome.runtime.sendMessage({ type: 'PLAYBACK_ENDED' }).catch(() => {});
+}
+
+function schedulePlaybackEnd() {
+    if (!audioContext) return;
+    if (playbackEndTimer) {
+        clearTimeout(playbackEndTimer);
+    }
+
+    const remainingMs = Math.max(0, (nextPlayTime - audioContext.currentTime) * 1000);
+    playbackEndTimer = setTimeout(() => {
+        playbackEndTimer = null;
+        if (audioContext && audioContext.currentTime + 0.02 < nextPlayTime) {
+            schedulePlaybackEnd();
+            return;
+        }
+        notifyPlaybackEnded();
+    }, remainingMs + 50);
+}
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     if (message.target !== 'offscreen') return;
@@ -110,6 +141,10 @@ async function startRecording() {
 let nextPlayTime = 0; // Ajout d'une variable pour gérer la file d'attente audio
 
 function stopPlaybackAndRecording() {
+    if (playbackEndTimer) {
+        clearTimeout(playbackEndTimer);
+        playbackEndTimer = null;
+    }
     if (workletNode) {
         workletNode.port.onmessage = null;
         workletNode.disconnect();
@@ -132,6 +167,7 @@ function stopPlaybackAndRecording() {
     }
     audioContext = null;
     nextPlayTime = 0; // Réinitialiser le temps de lecture
+    notifyPlaybackEnded();
     console.log("Capture audio PCM arrêtée.");
 }
 
@@ -178,9 +214,11 @@ async function playAudioData(base64PcmString) {
     if (nextPlayTime < audioContext.currentTime + 0.1) {
         nextPlayTime = audioContext.currentTime + 0.1;
     }
-    
+
+    notifyPlaybackStarted();
     source.start(nextPlayTime);
     nextPlayTime += audioBufferParams.duration;
+    schedulePlaybackEnd();
 }
 
 

@@ -6,6 +6,7 @@ class Router {
         this.pages = pages;
         this.mainElement = mainElement;
         this.navLinks = document.querySelectorAll('.nav-link');
+        this.currentPage = null;
         
         this.init();
     }
@@ -19,14 +20,16 @@ class Router {
             });
         });
 
-        // Initial navigation
-        const initialPage = 'home';
+        const initialPage = window.location.hash.replace('#', '') || 'home';
         this.navigate(initialPage);
     }
 
     navigate(pageId) {
-        // Update URL hash (optional for extension, but useful)
-        // window.location.hash = pageId;
+        if (!this.pages[pageId]) {
+            pageId = 'home';
+        }
+
+        window.location.hash = pageId;
 
         // Update nav links
         this.navLinks.forEach(link => {
@@ -40,7 +43,12 @@ class Router {
         // Render page
         const PageClass = this.pages[pageId];
         if (PageClass) {
+            if (this.currentPage?.destroy) {
+                this.currentPage.destroy();
+            }
+
             const page = new PageClass();
+            this.currentPage = page;
             this.mainElement.innerHTML = '';
             
             const pageElement = document.createElement('div');

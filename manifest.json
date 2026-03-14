@@ -46,16 +46,14 @@
   ],
   "options_page": "options/index.html",
   "icons": {
-    "16": "assets/logo_small.jpeg",
-    "48": "assets/logo.jpeg",
-    "128": "assets/logo.jpeg"
+    "64": "assets/icons/logo-64.png",
+    "128": "assets/icons/logo-128.png"
   },
   "action": {
     "default_title": "Ouvrir les paramètres de Jumeau",
     "default_icon": {
-      "16": "assets/logo_small.jpeg",
-      "48": "assets/logo.jpeg",
-      "128": "assets/logo.jpeg"
+      "64": "assets/icons/logo-64.png",
+      "128": "assets/icons/logo-128.png"
     }
   }
 }

@@ -1,0 +1,26 @@
+- execute_cursor_commands | action: deplacer le curseur virtuel vers une ou plusieurs cellules de la grille 8x8 | options/flags: aucune | arguments: commands obligatoire (array<object>)
+- execute_cursor_commands.commands[] | action: decrire une commande curseur individuelle | options/flags: aucune | arguments: command obligatoire (string), reason obligatoire (string)
+- execute_cursor_commands.commands[].command | action: indiquer la commande curseur a executer | options/flags: aucune | arguments: format exact `cursor move_to <cell_id>`
+- execute_cursor_commands.commands[].command.cursor move_to | action: deplacer le curseur vers une cellule cible | options/flags: aucune | arguments: cell_id obligatoire ; format attendu lettre+chiffre ; plage documentee dans le prompt = colonnes A-H et lignes 1-8 ; exemples `A1`, `D4`, `H8`
+- execute_cursor_commands.commands[].reason | action: expliquer pourquoi le curseur est deplace | options/flags: aucune | arguments: string libre obligatoire
+- create_workflow | action: creer ou mettre a jour un workflow blueprint dans le sidepanel | options/flags: aucune | arguments: title obligatoire (string), goal obligatoire (string), workflowId optionnel (string), trigger optionnel (string), summary optionnel (string), domain optionnel (string)
+- create_workflow.workflowId | action: cibler un workflow existant pour mise a jour | options/flags: aucune | arguments: string optionnel
+- create_workflow.title | action: definir le titre visible du workflow | options/flags: aucune | arguments: string obligatoire
+- create_workflow.goal | action: definir l'objectif du workflow | options/flags: aucune | arguments: string obligatoire
+- create_workflow.trigger | action: definir l'evenement ou l'action qui lance le workflow | options/flags: aucune | arguments: string optionnel
+- create_workflow.summary | action: definir un resume court du workflow | options/flags: aucune | arguments: string optionnel
+- create_workflow.domain | action: definir le contexte applicatif ou metier | options/flags: aucune | arguments: string optionnel
+- add_workflow_node | action: ajouter un noeud au workflow courant dans le sidepanel | options/flags: aucune | arguments: title obligatoire (string), description obligatoire (string), workflowId optionnel (string), workflowTitle optionnel (string), nodeType optionnel (string), status optionnel (string), rationale optionnel (string)
+- add_workflow_node.workflowId | action: cibler un workflow existant via son identifiant | options/flags: aucune | arguments: string optionnel
+- add_workflow_node.workflowTitle | action: cibler un workflow existant via son titre ou fournir un fallback | options/flags: aucune | arguments: string optionnel
+- add_workflow_node.title | action: definir le titre du noeud | options/flags: aucune | arguments: string obligatoire
+- add_workflow_node.description | action: definir la description du noeud | options/flags: aucune | arguments: string obligatoire
+- add_workflow_node.nodeType | action: definir le type du noeud | options/flags: aucune | arguments: string optionnel ; valeurs documentees = `observe`, `trigger`, `step`, `decision`, `output`, `question`
+- add_workflow_node.status | action: definir l'etat du noeud | options/flags: aucune | arguments: string optionnel ; valeurs documentees = `draft`, `thinking`, `ready`
+- add_workflow_node.rationale | action: expliquer pourquoi le noeud a ete ajoute | options/flags: aucune | arguments: string optionnel
+- ask_workflow_question | action: ajouter une question de clarification au sidepanel pour affiner le workflow | options/flags: aucune | arguments: question obligatoire (string), workflowId optionnel (string), workflowTitle optionnel (string), context optionnel (string), suggestedAnswers optionnel (array<string>)
+- ask_workflow_question.workflowId | action: cibler un workflow existant via son identifiant | options/flags: aucune | arguments: string optionnel
+- ask_workflow_question.workflowTitle | action: cibler un workflow existant via son titre | options/flags: aucune | arguments: string optionnel
+- ask_workflow_question.question | action: definir la question de clarification a poser | options/flags: aucune | arguments: string obligatoire
+- ask_workflow_question.context | action: expliquer pourquoi la question est utile | options/flags: aucune | arguments: string optionnel
+- ask_workflow_question.suggestedAnswers | action: proposer des reponses courtes a afficher | options/flags: aucune | arguments: array<string> optionnel

@@ -5,6 +5,7 @@ let isRecording = false;
 let geminiWs = null;
 let screenshotInterval = null;
 let geminiSessionReady = false;
+let isGeminiSpeaking = false;
 const GEMINI_LIVE_MODEL = 'models/gemini-2.5-flash-native-audio-preview-12-2025';
 const GEMINI_LIVE_ENDPOINT = 'wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1beta.GenerativeService.BidiGenerateContent';
 const GEMINI_CONNECT_TIMEOUT_MS = 10000;
@@ -16,6 +17,68 @@ const MAX_WORKFLOW_NODES = 24;
 let liveCanvasState = createEmptyLiveCanvasState();
 let liveCanvasStateLoaded = false;
 const liveCanvasStateReady = loadLiveCanvasState();
+
+function logLaunch(label, details) {
+    if (details === undefined) {
+        console.log(`[LAUNCH] ${label}`);
+        return;
+    }
+    console.log(`[LAUNCH] ${label}`, details);
+}
+
+function summarizeFunctionDeclaration(fn) {
+    return {
+        name: fn.name,
+        description: fn.description,
+        parameters: fn.parameters
+    };
+}
+
+function summarizeGeminiPayload(payload) {
+    if (payload.setup) {
+        const functionDeclarations = payload.setup.tools?.flatMap((tool) => tool.functionDeclarations || []) || [];
+        return {
+            type: 'setup',
+            model: payload.setup.model,
+            systemInstruction: payload.setup.systemInstruction?.parts?.map((part) => part.text || '').join('\n') || '',
+            tools: functionDeclarations.map(summarizeFunctionDeclaration),
+            generationConfig: payload.setup.generationConfig || null
+        };
+    }
+
+    if (payload.realtimeInput?.audio) {
+        return {
+            type: 'realtimeInput.audio',
+            mimeType: payload.realtimeInput.audio.mimeType,
+            base64Length: payload.realtimeInput.audio.data?.length || 0
+        };
+    }
+
+    if (payload.realtimeInput?.video) {
+        return {
+            type: 'realtimeInput.video',
+            mimeType: payload.realtimeInput.video.mimeType,
+            base64Length: payload.realtimeInput.video.data?.length || 0
+        };
+    }
+
+    if (payload.clientContent) {
+        return {
+            type: 'clientContent',
+            turnComplete: Boolean(payload.clientContent.turnComplete),
+            turns: payload.clientContent.turns || []
+        };
+    }
+
+    if (payload.toolResponse) {
+        return {
+            type: 'toolResponse',
+            functionResponses: payload.toolResponse.functionResponses || []
+        };
+    }
+
+    return payload;
+}
 
 // Gérer la création du sidepanel au clic sur l'icône de l'extension
 chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: true }).catch((error) => console.error(error));
@@ -277,6 +340,56 @@ async function addWorkflowQuestionFromTool(args = {}) {
     });
 }
 
+async function setCurrentWorkflowFromMessage(args = {}) {
+    return mutateLiveCanvasState((state) => {
+        const workflow = findWorkflow(state, args);
+
+        if (!workflow) {
+            throw new Error('Workflow not found');
+        }
+
+        state.currentWorkflowId = workflow.id;
+        return workflow;
+    });
+}
+
+async function reorderWorkflowNodesFromMessage(args = {}) {
+    return mutateLiveCanvasState((state) => {
+        const workflow = findWorkflow(state, args);
+
+        if (!workflow) {
+            throw new Error('Workflow not found');
+        }
+
+        const requestedNodeIds = Array.isArray(args.nodeIds)
+            ? args.nodeIds.map((nodeId) => cleanText(nodeId)).filter(Boolean)
+            : [];
+
+        if (!requestedNodeIds.length) {
+            throw new Error('No node order provided');
+        }
+
+        const nodeMap = new Map((workflow.nodes || []).map((node) => [node.id, node]));
+        const reorderedNodes = [];
+
+        requestedNodeIds.forEach((nodeId) => {
+            const node = nodeMap.get(nodeId);
+            if (!node) {
+                return;
+            }
+
+            reorderedNodes.push(node);
+            nodeMap.delete(nodeId);
+        });
+
+        workflow.nodes = reorderedNodes.concat(Array.from(nodeMap.values()));
+        workflow.updatedAt = Date.now();
+        state.currentWorkflowId = workflow.id;
+
+        return workflow;
+    });
+}
+
 function normalizeToolArgs(args) {
     if (!args) return {};
     if (typeof args === 'string') {
@@ -324,7 +437,7 @@ function sendGeminiToolResponse(mode, functionCall, response) {
             }
         };
 
-    console.error("🚀 [WS TOOL RESPONSE] Envoi du résultat du tool :\n", JSON.stringify(payload, null, 2));
+    logLaunch('Outbound Gemini tool response', summarizeGeminiPayload(payload));
 
     if (geminiWs && geminiWs.readyState === WebSocket.OPEN) {
         geminiWs.send(JSON.stringify(payload));
@@ -378,9 +491,13 @@ async function executeCursorCommands(functionCall, mode) {
 }
 
 async function handleGeminiFunctionCall(functionCall, mode) {
-    console.error("🛠️ [WS TOOL CALL RECEIVED] Tool call reçu :\n", JSON.stringify(functionCall, null, 2));
-
     const args = normalizeToolArgs(functionCall.args);
+    logLaunch('Inbound Gemini tool call', {
+        mode,
+        id: functionCall.id,
+        name: functionCall.name,
+        args
+    });
 
     if (functionCall.name === "execute_cursor_commands") {
         await executeCursorCommands(functionCall, mode);
@@ -580,9 +697,7 @@ async function connectToGeminiLive() {
             geminiWs.send = (data) => {
                 try {
                     const parsed = JSON.parse(data);
-                    if (!parsed.realtimeInput) { // On ne loggue pas les chunks audio pour éviter de spammer la console
-                        console.error("⬆️ [WS SENT]:", parsed);
-                    }
+                    logLaunch('Outbound Gemini payload', summarizeGeminiPayload(parsed));
                 } catch(e) { /* binary */ }
                 originalWsSend(data);
             };
@@ -613,8 +728,11 @@ COMPORTEMENT ATTENDU :
 - Quand une zone reste ambiguë, utilise ask_workflow_question et pose aussi la question à voix haute.
 - Les tools ne lancent aucune vraie automatisation : ils servent uniquement à construire un aperçu mocké visible dans le sidepanel.
 - Tu peux dire des phrases comme : "c'est intéressant, je crée un nouveau workflow", "j'ajoute un noeud pour cette étape", "il me manque une règle ici".
+- Tu comprends toutes les langues de l'utilisateur, y compris le français, mais tu réponds toujours en anglais naturel et fluide.
 
 RÈGLES CRITIQUES :
+- RÉPONDS TOUJOURS EN ANGLAIS, même si l'utilisateur parle en français ou dans une autre langue.
+- Ne change jamais la langue de tes réponses, sauf si l'utilisateur demande explicitement une traduction ou une citation dans une autre langue.
 - Quand tu veux montrer quelque chose à l'utilisateur, utilise le tool execute_cursor_commands avec la cellule correspondante (ex: "cursor move_to D4").
 - NE MENTIONNE JAMAIS les coordonnées de grille dans ta parole (pas de "D4", "cellule A1", "case B3", etc.). Parle naturellement : "je te montre ici", "regarde là", "cet élément", etc.
 - Parle comme un copilote de process, pas comme un simple commentateur d'écran.`
@@ -711,7 +829,7 @@ RÈGLES CRITIQUES :
                     }
                 };
                 
-                console.error("🚀 [WS SETUP] Envoi de la configuration initiale à Gemini (Prompt System, Tools) :\n", JSON.stringify(setupMessage, null, 2));
+                logLaunch('Gemini setup prepared', summarizeGeminiPayload(setupMessage));
                 geminiWs.send(JSON.stringify(setupMessage));
             };
 
@@ -765,6 +883,11 @@ RÈGLES CRITIQUES :
                                 }
                                 
                                 if (part.functionCall) {
+                                    logLaunch('Embedded function call detected in model turn', {
+                                        id: part.functionCall.id,
+                                        name: part.functionCall.name,
+                                        args: normalizeToolArgs(part.functionCall.args)
+                                    });
                                     await handleGeminiFunctionCall(part.functionCall, 'embedded');
                                 }
                             }
@@ -778,6 +901,11 @@ RÈGLES CRITIQUES :
                          // L'API Live envoie les toolCalls au niveau racine (pas dans serverContent)
                          sendSidepanelStatus('thinking');
                          const functionCalls = responseData.toolCall.functionCalls || [];
+                         logLaunch('Root tool call batch received', functionCalls.map((fc) => ({
+                             id: fc.id,
+                             name: fc.name,
+                             args: normalizeToolArgs(fc.args)
+                         })));
                          for (const fc of functionCalls) {
                              await handleGeminiFunctionCall(fc, 'root');
                          }
@@ -853,6 +981,39 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
           });
       return true;
   }
+
+  else if (message.type === 'SET_CURRENT_WORKFLOW') {
+      setCurrentWorkflowFromMessage({ workflowId: message.workflowId })
+          .then((workflow) => {
+              sendResponse({
+                  ok: true,
+                  workflowId: workflow.id,
+                  state: cloneLiveCanvasState()
+              });
+          })
+          .catch((error) => {
+              sendResponse({ ok: false, error: error.message });
+          });
+      return true;
+  }
+
+  else if (message.type === 'REORDER_WORKFLOW_NODES') {
+      reorderWorkflowNodesFromMessage({
+          workflowId: message.workflowId,
+          nodeIds: message.nodeIds
+      })
+          .then((workflow) => {
+              sendResponse({
+                  ok: true,
+                  workflowId: workflow.id,
+                  state: cloneLiveCanvasState()
+              });
+          })
+          .catch((error) => {
+              sendResponse({ ok: false, error: error.message });
+          });
+      return true;
+  }
   
   else if (message.type === 'TOGGLE_MUTE') {
       sendOffscreenMessage({ target: 'offscreen', type: 'TOGGLE_MUTE' })
@@ -868,6 +1029,9 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   
   else if (message.type === 'AUDIO_CHUNK') {
       // Les données PCM brutes arrivent ici depuis l'offscreen
+      if (isGeminiSpeaking) {
+          return false;
+      }
       if (geminiWs && geminiSessionReady && geminiWs.readyState === WebSocket.OPEN) {
           // Formatage d'un message ClientContent pour Gemini (realtimeInput)
           const audioMessage = {
@@ -883,6 +1047,17 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   }
   else if (message.type === 'RECORDING_STARTED') {
       console.log("Capture micro démarrée :", message.details);
+  }
+  else if (message.type === 'PLAYBACK_STARTED') {
+      isGeminiSpeaking = true;
+      console.log("Lecture audio Gemini démarrée, pause temporaire des inputs live.");
+  }
+  else if (message.type === 'PLAYBACK_ENDED') {
+      isGeminiSpeaking = false;
+      console.log("Lecture audio Gemini terminée, reprise des inputs live.");
+      if (isRecording) {
+          sendSidepanelStatus('listening');
+      }
   }
   else if (message.type === 'RECORDING_ERROR') {
       const error = deserializeError(message.error);
@@ -916,6 +1091,7 @@ async function startAudioCapture() {
 function stopAudioCapture() {
     isRecording = false;
     geminiSessionReady = false;
+    isGeminiSpeaking = false;
     stopScreenshotLoop();
     sendSidepanelStatus('ready');
     
@@ -954,7 +1130,7 @@ function startScreenshotLoop() {
     if (screenshotInterval) return;
     console.error("📸 Démarrage de la boucle de capture d'écran (1 img/sec)...");
     screenshotInterval = setInterval(async () => {
-        if (!geminiWs || !geminiSessionReady || geminiWs.readyState !== WebSocket.OPEN) return;
+        if (!geminiWs || !geminiSessionReady || geminiWs.readyState !== WebSocket.OPEN || isGeminiSpeaking) return;
         try {
             const dataUrl = await captureScreenWithGridTool();
             const base64 = dataUrl.split(',')[1];
