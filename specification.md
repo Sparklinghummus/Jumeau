@@ -1,87 +1,85 @@
-# Spécification Technique : Extension Chrome "Jumeau" (Manifest V3 - 2026)
+# Spécification Technique : Extension Chrome "Jumeau" (Manifest V3)
 
 ## 1. Vue d'ensemble du projet
-Cette extension Chrome offre une interaction vocale et visuelle continue avec un assistant IA (Gemini 2.5 Live). Elle injecte un élément d'interface discret (une "pilule") sur les pages web visitées, permettant à l'utilisateur de communiquer vocalement avec l'IA tout en lui partageant le contexte visuel (capture d'écran ou flux vidéo) en temps réel.
+"Jumeau" est une extension Chrome agissant comme un "sidekick" multimodal piloté par la voix. Son but est d'observer l'écran de l'utilisateur, d'écouter ses intentions et de construire visuellement une logique applicative portable (Skills/Gems/Agents).
+
+Conformément au PRD, l'extension s'appuie sur les capacités natives de Chrome pour offrir une expérience "ambiante", sans nécessiter un onglet dédié. 
 
 ## 2. Architecture de l'Extension (Manifest V3)
-L'architecture repose sur les standards de sécurité et de performance de Chrome Extensions Manifest V3 (implémentation 2026), interdisant l'exécution de code distant et imposant l'utilisation des Service Workers pour les tâches de fond.
+L'architecture respecte les standards stricts de sécurité et de performance de Chrome Extensions Manifest V3 (implémentation 2026), interdisant l'exécution de code distant et utilisant des Service Workers et des Offscreen Documents.
 
 ### Composants principaux :
-1.  **Service Worker (`background.js`)** : Le cœur logique de l'extension. Gère la connexion WebSocket/WebRTC avec l'API Gemini 2.5 Live, coordonne les flux audio/vidéo et gère l'état global.
-2.  **Content Scripts (`content.js`, `content.css`)** : Injectés dans chaque onglet. Gèrent l'interface utilisateur (la "pilule" audio) et la capture du DOM/écran local à l'onglet en cours.
-3.  **Page d'Options / Popup (`index.html` & `settings.js`)** : Interface de configuration de l'extension.
-4.  **Offscreen Document (`offscreen.html`)** : *(Nécessaire en MV3 2026 pour le traitement audio continu ou l'enregistrement d'écran prolongé, le Service Worker n'ayant pas accès aux APIs DOM complètes comme `MediaRecorder` ou l'accès au microphone persistant sans interface).*
+1.  **Service Worker (`background.js`)** : Le cœur logique de l'extension. Gère l'état global, la mémoire utilisateur ("Knowledge Repo"), orchestre les WebSockets/APIs vers le backend multimodal (Vision/Audio) et communique avec le Sidepanel.
+2.  **Sidepanel (`sidepanel.html` & `sidepanel.js`)** : Interface persistante hébergeant le "Live Canvas". C'est là qu'apparaissent dynamiquement les "bulles" de workflow construites pendant l'échange vocal.
+3.  **Content Scripts (`content.js`, `content.css`)** : Injectés dans chaque onglet. Gèrent :
+    *   L'interface utilisateur de la "pilule" audio (point d'entrée optionnel en plus de l'icône de la barre Chrome).
+    *   **Les "Overlay Highlights"** : Une couche d'encre ("ink layer") transparente dessinée par-dessus le DOM pour mettre en évidence ce que l'IA est en train d'analyser.
+    *   L'injection DOM pour l'export universel (ex: remplissage du champ "System Instructions" sur Gemini).
+4.  **Offscreen Document (`offscreen.html`)** : Nécessaire en MV3 pour maintenir une capture audio (micro) continue en full-duplex, car le Service Worker n'a pas accès à l'API `MediaRecorder` ni aux flux audio continus.
 
-## 3. Détail des Composants
+## 3. Détail des Fonctionnalités Clés
 
-### 3.1. Content Script (`content.js`)
-*   **Injection de la "Pilule" UI** :
-    *   Crée un élément DOM isolé (via Shadow DOM pour éviter les conflits CSS avec la page hôte).
-    *   Positionné en mode `fixed` en bas au centre ou sur le côté de l'écran.
-    *   États visuels de la pilule : Inactif, Écoute (micro actif), Réflexion (traitement), Parle (lecture audio IA).
-*   **Interaction Audio** :
-    *   Bouton cliquable pour activer/désactiver le micro (Push-to-talk ou bascule continue).
-    *   Capture l'audio du microphone de l'utilisateur. L'audio brut est envoyé au Service Worker / Offscreen via `chrome.runtime.sendMessage`.
-*   **Capture d'Écran / Vidéo Continue (Le "Tool" Visuel)** :
-    *   Utilise la capture adaptative de la fenêtre avec `chrome.tabs.captureVisibleTab` (orchestré par le background) ou extraction directe du DOM.
-    *   *Approche 2026 pour Gemini Live* : Extraction de frames (par ex. 1 à 2 images par seconde) et transmission de ces frames sous forme cryptée ou encodée au Service Worker pour analyse de contexte par l'IA.
+### 3.1. Interactivité Multimodale ("Look and Speak")
+*   **Capture Visuelle** : Utilise `chrome.tabs.captureVisibleTab` ou `desktopCapture` pour prendre des clichés du viewport actif.
+*   **Backbone Multimodal (Modèles)** :
+    *   **Transcription (STT)** : Whisper API ou Gemini Nano (en local sur l'appareil pour la rapidité).
+    *   **Vision & Logique (LLM)** : Claude 3.5 Sonnet Vision (ou Gemini 2.5) pour analyser la capture d'écran, comprendre le DOM (via le script de contenu) et structurer la logique (le Blueprint).
+    *   **Synthèse Vocale (TTS)** : ElevenLabs pour une voix d'interrogation naturelle et réactive.
+*   **Overlay Highlights** : Le LLM renvoie des coordonnées ou des sélecteurs CSS des éléments pertinents (ex: liste d'articles, profil contact). Le `content.js` dessine un "glow" vert autour de ces éléments via une surcouche Canvas ou CSS isolée.
 
-### 3.2. Service Worker & API Gemini (`background.js`)
-*   **Agent Gemini 2.5 Live** :
-    *   Établit une connexion bidirectionnelle persistante avec l'endpoint Gemini Multimodal Live API.
-    *   **Input** : Multiplexe le flux audio de l'utilisateur et le flux vidéo/images (frames de l'écran) en provenance du `content.js`.
-    *   **Output** : Reçoit le flux audio généré par Gemini en temps réel.
-*   **Orchestration** : Gère les interruptions, les erreurs réseau, et fait le pont permanent entre la pilule UI (`content.js`) et l'API d'intelligence artificielle.
+### 3.2. Interactive Live Canvas (Sidepanel)
+*   **Interface Vue (UI)** : Construit dynamiquement des nœuds (bulles) représentant chaque étape de la logique déduite par l'IA.
+*   **Interactivité** : Permet à l'utilisateur, même non-technique, d'éditer le flux par la voix ("Supprime cette étape") ou manuellement (swipe/clic pour supprimer).
+*   **États visuels** : Les bulles ont des indicateurs d'état ("En réflexion", "Info manquante", "Prêt à exporter").
 
-### 3.3. Document Offscreen (`offscreen.html` & `offscreen.js`) - *Requis Manifest V3*
-En Manifest V3, les Service Workers ne peuvent pas instancier l'API `AudioContext` ni maintenir activement des MediaStream persistants pour le micro en arrière-plan sans interface utilisateur associée.
-*   Ce document fantôme est chargé de décompresser et de lire à la volée le flux audio reçu depuis Gemini.
-*   Il s'occupe de maintenir l'enregistrement micro API de l'utilisateur actif tant que l'extension est utilisée.
+### 3.3. The Knowledge Repo (Mémoire personnelle)
+*   Implémenté via `chrome.storage.local` (et potentiellement IndexedDB pour les gros historiques).
+*   **Domain Awareness** : Le background enregistre le vocabulaire ou les habitudes propres à un domaine (ex: `github.com` associé à "ticket").
+*   **Skill Memory** : Mémorisation des Skills précédemment créés avec suggestion contextuelle activée selon l'URL de l'onglet actif.
 
-### 3.4. Interface de Configuration (`index.html`)
-Page d'options ou Popup pour la personnalisation :
-*   **Clé API (API Key)** : Champ sécurisé (sauvegardé via `chrome.storage.local`) pour la clé Google Gemini API.
-*   **Réglages Audio/Vidéo** :
-    *   Sélection du périphérique d'entrée micro.
-    *   Réglage de la fréquence de capture d'écran de la page (économie de bande passante).
-*   **Prompt Système** : Configuration du persona ou des instructions spécifiques pour le Worker IA.
-*   **Protection et Confidentialité** : Liste des domaines où la capture et l'injection sont interdites (Blacklist).
+### 3.4. The Translator (Export Universel)
+À la fin de l'interaction, le Blueprint est traduit vers la plateforme cible choisie par l'utilisateur :
+*   **Claude** : Le Service Worker génère un fichier `SKILL.md` (via l'API File ou Blob) et déclenche un téléchargement/upload sur la page cible.
+*   **Gemini** : Le `content.js` identifie les textareas spécifiques sur la page de Gemini et y injecte le prompt structuré (via le DOM).
+*   **Copilot** : Formatage en bloc d'instructions personnalisées pour Microsoft 365.
 
-## 4. Flux de Données et Communication (Data Flow)
-
-1. **Initialisation** : L'utilisateur navigue sur une page. `content.js` est injecté silencieusement.
-2. **Déclenchement** : L'utilisateur clique sur la pilule en bas d'écran.
-3. **Transmission Audio & Vidéo** :
-    * Le micro est ouvert (via Offscreen).
-    * `content.js` envoie des clichés visuels réguliers de la page active au background.
-4. **Appel IA** : Le `background.js` assemble ces données (audio hertzien + images) et stream vers Gemini 2.5 Live via un socket sécurisé.
-5. **Réponse IA** : Gemini analyse le visuel et propose une réponse audio.
-6. **Restitution** : L'audio redescend, est joué à l'utilisateur, et l'UI du `content.js` s'anime pour montrer que l'IA parle.
+## 4. Flux d'Interaction (Le "Morning Routine")
+1. **Déclencheur** : Clic sur l'icône de l'extension (action Chrome) ou sur la pilule de l'onglet actif.
+2. **Audio I/O** : Le document Offscreen capture le micro et streame vers le Service Worker, qui route vers le STT.
+3. **Capture Visuelle** : En parallèle, le SW demande au Content Script / API Tabs de capturer l'écran et envoie l'image + texte au LLM Vision.
+4. **Génération & UI** : Le LLM répond. Le SW ordonne au Sidepanel d'afficher de nouvelles bulles de Blueprint. Le TTS ElevenLabs lit la réponse à haute voix.
+5. **Actionnement** : L'utilisateur approuve le Blueprint final. Le SW envoie les données formatées au module Translator pour l'export (ex: click "Go" -> injection dans Claude/Gemini).
 
 ## 5. Fichiers et Structure du projet
 ```text
 /
-├── manifest.json       # Configuration V3, versionning et permissions (tabCapture, storage, etc)
-├── background.js       # Logique centrale, worker Gemini Live
+├── manifest.json       # Permissions étendues (sidePanel, desktopCapture, etc.)
+├── background.js       # Worker : orchestration IA, Knowledge Repo, Translator
 ├── content/
-│   ├── content.js      # Gère la pilule UI, events DOM et envoi des frames
+│   ├── content.js      # Pilule UI, Overlay Highlights (ink layer), DOM Injection (Export)
 │   └── content.css     # Style des composants injectés
+├── sidepanel/
+│   ├── sidepanel.html  # Le "Live Canvas"
+│   ├── sidepanel.css
+│   └── sidepanel.js    # Rendu dynamique des nœuds/bulles
 ├── offscreen/
-│   ├── offscreen.html  # Document technique invisible pour l'audio I/O
-│   └── offscreen.js    # Worker local gérant MediaRecorder et AudioContext
+│   ├── offscreen.html  # Document fantôme pour Web Audio / microphone en continu
+│   └── offscreen.js    
 ├── options/
-│   ├── index.html      # UI des paramètres d'extension
+│   ├── index.html      # Configuration des clés (ElevenLabs, Claude, Gemini, Whisper)
 │   ├── settings.css    
-│   └── settings.js     # Logique de la page d'options
+│   └── settings.js     
 └── assets/             
-    ├── icons/          # Icônes de l'app (16, 48, 128)
-    └── ui/             # Actifs visuels pour la pilule UI
+    ├── icons/          
+    └── ui/             
 ```
 
 ## 6. Permissions requises (`manifest.json`)
 *   `"permissions"` : 
-    *   `"storage"` : Persistance des paramètres.
-    *   `"activeTab"` / `"tabCapture"` : Autorisation de capturer le contenu visuel de l'onglet actif.
-    *   `"scripting"` : Autorisation d'injecter la pilule (`content.js`).
-    *   `"offscreen"` : Création du processus caché pour l'audio.
-*   `"host_permissions"` : `["<all_urls>"]` (Indispensable pour fonctionner partout).
+    *   `"sidePanel"` : Création et gestion du Live Canvas persistant.
+    *   `"storage"` : Knowledge Repo et paramètres.
+    *   `"activeTab"` / `"tabCapture"` : Capture de l'onglet actif pour le LLM Vision.
+    *   `"desktopCapture"` : (Optionnel/Selon besoin) Capture étendue d'écran.
+    *   `"scripting"` : Exécution de code pour les Overlay Highlights et le DOM Injection.
+    *   `"offscreen"` : Enregistrement micro en arrière-plan.
+*   `"host_permissions"` : `["<all_urls>"]` (Indispensable pour l'injection logicielle universelle).

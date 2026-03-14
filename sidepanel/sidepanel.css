@@ -1,0 +1,147 @@
+body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    background-color: #f8fafc;
+    color: #1e293b;
+}
+
+.canvas-header {
+    padding: 16px;
+    background-color: white;
+    border-bottom: 1px solid #e2e8f0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-shrink: 0;
+}
+
+h1 {
+    font-size: 16px;
+    margin: 0;
+    font-weight: 600;
+}
+
+.status-indicator {
+    display: flex;
+    align-items: center;
+    font-size: 13px;
+    gap: 6px;
+    color: #64748b;
+}
+
+.dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background-color: #cbd5e1;
+}
+
+.status-indicator.listening .dot {
+    background-color: #ef4444;
+    animation: pulse-dot 1.5s infinite;
+}
+
+.status-indicator.thinking .dot {
+    background-color: #f59e0b;
+    animation: blink-dot 1s infinite;
+}
+
+.canvas-body {
+    flex-grow: 1;
+    padding: 20px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.empty-state {
+    text-align: center;
+    color: #94a3b8;
+    font-size: 14px;
+    margin-top: 40px;
+}
+
+/* Styles pour les Blueprint Nodes */
+.node {
+    background: white;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 12px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    animation: slide-in 0.3s ease-out;
+    position: relative;
+}
+
+.node::before {
+    content: '';
+    position: absolute;
+    top: -12px;
+    left: 24px;
+    width: 2px;
+    height: 12px;
+    background-color: #cbd5e1;
+}
+.node:first-child::before {
+    display: none;
+}
+
+.node-title {
+    font-weight: 600;
+    font-size: 14px;
+    margin-bottom: 4px;
+}
+
+.node-desc {
+    font-size: 13px;
+    color: #64748b;
+    margin: 0;
+}
+
+.canvas-footer {
+    padding: 16px;
+    background-color: white;
+    border-top: 1px solid #e2e8f0;
+    flex-shrink: 0;
+}
+
+button {
+    width: 100%;
+    padding: 10px;
+    background-color: #3b82f6;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+button:hover:not(:disabled) {
+    background-color: #2563eb;
+}
+
+button:disabled {
+    background-color: #94a3b8;
+    cursor: not-allowed;
+}
+
+@keyframes slide-in {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes pulse-dot {
+    0% { transform: scale(1); opacity: 1; }
+    50% { transform: scale(1.2); opacity: 0.6; }
+    100% { transform: scale(1); opacity: 1; }
+}
+
+@keyframes blink-dot {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.3; }
+}

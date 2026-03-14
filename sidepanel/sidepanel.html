@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Jumeau - Live Canvas</title>
+    <link rel="stylesheet" href="sidepanel.css">
+</head>
+<body>
+    <div class="canvas-header">
+        <h1>Live Canvas</h1>
+        <div id="ai-status" class="status-indicator">
+            <span class="dot"></span> Prêt
+        </div>
+    </div>
+
+    <div class="canvas-body" id="nodes-container">
+        <!-- Les bulles/nodes de workflow s'ajouteront ici -->
+        <div class="empty-state" id="empty-msg">
+            <p>Cliquez sur l'icône micro sur la page web courante et commandez l'IA avec la voix.</p>
+        </div>
+    </div>
+
+    <div class="canvas-footer">
+        <button id="exportBtn" disabled>Exporter le Blueprint</button>
+    </div>
+
+    <script src="sidepanel.js"></script>
+</body>
+</html>

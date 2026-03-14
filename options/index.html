@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Jumeau Setup</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background-color: #ffffff;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 500px;
+            padding: 40px;
+        }
+
+        h1 {
+            font-size: 24px;
+            color: #111111;
+            margin-bottom: 32px;
+            font-weight: 500;
+            letter-spacing: -0.5px;
+        }
+
+        .input-group {
+            position: relative;
+            display: flex;
+            align-items: center;
+            border-bottom: 2px solid #e5e5e5;
+            transition: border-color 0.3s;
+        }
+
+        .input-group:focus-within {
+            border-bottom-color: #3b82f6;
+        }
+
+        input {
+            width: 100%;
+            padding: 16px 0;
+            font-size: 20px;
+            border: none;
+            outline: none;
+            background: transparent;
+            color: #333333;
+            font-family: monospace;
+        }
+
+        input::placeholder {
+            color: #cccccc;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            font-weight: 400;
+        }
+
+        button {
+            margin-top: 32px;
+            padding: 12px 24px;
+            background-color: #111111;
+            color: white;
+            border: none;
+            border-radius: 999px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+            float: right;
+        }
+
+        button:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            background-color: #222222;
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        .status {
+            margin-top: 32px;
+            font-size: 14px;
+            color: #10b981;
+            opacity: 0;
+            transition: opacity 0.3s;
+            clear: both;
+            text-align: right;
+        }
+
+        .status.visible {
+            opacity: 1;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h1>Gemini API Key</h1>
+        
+        <div class="input-group">
+            <input type="password" id="apiKey" placeholder="AIzaSy..." autocomplete="off" spellcheck="false">
+        </div>
+
+        <button id="saveBtn">Save Setup</button>
+        <button id="micBtn" style="margin-right: 12px; background-color: #f3f4f6; color: #111;">Autoriser le Micro</button>
+        <div id="status" class="status">Saved successfully.</div>
+    </div>
+
+    <script src="options.js"></script>
+</body>
+</html>

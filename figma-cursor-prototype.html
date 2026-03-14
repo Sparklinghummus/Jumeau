@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Curseur IA Façon Figma</title>
+    <style>
+        /* Base / Minimalisme */
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background-color: #f8fafc; /* Blanc cassé doux */
+            color: #1e293b;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            overflow: hidden;
+        }
+
+        /* Bouton déclencheur */
+        #action-btn {
+            position: fixed;
+            bottom: 40px;
+            padding: 12px 24px;
+            font-size: 16px;
+            font-weight: 600;
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            border-radius: 999px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+            cursor: pointer;
+            z-index: 100;
+            transition: transform 0.2s, box-shadow 0.2s;
+            outline: none;
+            color: #3b82f6;
+        }
+
+        #action-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(0,0,0,0.08);
+        }
+
+        #action-btn:active {
+            transform: translateY(0);
+        }
+
+        /* Conteneur des éléments de la page */
+        .page-content {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 60px;
+            justify-items: center;
+            width: 100%;
+            max-width: 800px;
+            padding: 40px;
+        }
+
+        /* Les cibles invisibles/discrètes "en encre" */
+        .target {
+            padding: 24px;
+            width: 100%;
+            max-width: 250px;
+            border-radius: 12px;
+            border: 2px dashed #cbd5e1; /* Encre très légère / Wireframe */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            color: #94a3b8;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
+        /* L'élément ciblé devient le centre de l'attention */
+        .target.focused {
+            border-style: solid;
+            border-color: #3b82f6;
+            color: #2563eb;
+            background-color: #eff6ff;
+            transform: scale(1.02);
+            box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.1);
+        }
+
+        /* Placement atypique pour le 3ème élément */
+        #target-3 {
+            grid-column: 1 / -1; 
+            max-width: 400px;
+        }
+
+        /* 
+         * LE CURSEUR FAÇON FIGMA MULTIJOUEUR 
+         */
+        #fake-cursor {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 32px; /* Taille ajustée pour le nouveau curseur */
+            height: 32px;
+            pointer-events: none; /* Ne gêne pas les clics en dessous */
+            z-index: 9999;
+            /* Animation "Spring" : transition fluide avec rebond */
+            transition: transform 0.6s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.3s;
+            /* Point d'origine au bout de la flèche (haut-gauche du SVG) */
+            transform-origin: 0 0;
+            opacity: 0; /* Caché au départ */
+        }
+
+        #fake-cursor svg {
+            width: 100%;
+            height: 100%;
+            filter: drop-shadow(0 2px 4px rgba(0,0,0,0.15));
+        }
+
+        #fake-cursor.visible {
+            opacity: 1;
+        }
+
+    </style>
+</head>
+<body>
+
+    <!-- Le Curseur fictif IA -->
+    <div id="fake-cursor">
+        <svg viewBox="0 0 128 128" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M10.2188 13.5547C9.31555 11.4472 11.4472 9.31555 13.5547 10.2188L116.459 54.3213C118.769 55.3112 118.392 58.6957 115.921 59.1533L72.4443 67.2051C69.7814 67.6983 67.6983 69.7814 67.2051 72.4443L59.1533 115.921C58.6957 118.392 55.3112 118.769 54.3213 116.459L10.2188 13.5547Z" fill="#469AF9" stroke="white" stroke-width="4"/>
+        </svg>
+    </div>
+
+
+    <div class="page-content">
+        <!-- Les 3 éléments de contenu filaire -->
+        <div class="target" id="target-1">Bloc Contenu A</div>
+        <div class="target" id="target-2">Bloc Contenu B</div>
+        <div class="target" id="target-3">Champ de Formulaire C</div>
+    </div>
+
+    <!-- Bouton pour interagir avec le POC -->
+    <button id="action-btn">Simuler clic IA</button>
+
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const cursor = document.getElementById('fake-cursor');
+            const btn = document.getElementById('action-btn');
+            
+            // On récupère tous nos éléments cibles
+            const targets = [
+                document.getElementById('target-1'),
+                document.getElementById('target-2'),
+                document.getElementById('target-3')
+            ];
+
+            let currentStep = -1;
+
+            // Fonction pour déplacer le curseur vers le centre d'un élément
+            function moveCursorTo(element) {
+                // Rendre le curseur visible si c'est le 1er clic
+                if (!cursor.classList.contains('visible')) {
+                    // Start position somewhere offscreen or center
+                    cursor.style.transform = `translate(50vw, 50vh)`;
+                    // Forcer un reflow avant de mettre la classe visible
+                    void cursor.offsetWidth; 
+                    cursor.classList.add('visible');
+                }
+
+                // Récupération des coordonnées de l'élément cible
+                const rect = element.getBoundingClientRect();
+                
+                // On vise le centre de l'élément (légèrement décalé à cause de la flèche)
+                const targetX = rect.left + (rect.width / 2);
+                const targetY = rect.top + (rect.height / 2);
+
+                // Appliquer la transformation CSS (le curseur se déplacera avec la transition "spring" du CSS)
+                cursor.style.transform = `translate(${targetX}px, ${targetY}px)`;
+
+                // Gérer le style visuel des blocs cibles
+                targets.forEach(t => t.classList.remove('focused'));
+                
+                // Petit délai pour simuler le fait que l'IA clique après le mouvement
+                setTimeout(() => {
+                    element.classList.add('focused');
+                    // On peut imaginer ici l'action du clic (ex: remplir un texte, etc.)
+                }, 400); // 400ms = peu avant la fin de l'animation spring de 600ms
+            }
+
+            btn.addEventListener('click', () => {
+                // Incrémenter l'étape (boucler sur les 3 éléments)
+                currentStep = (currentStep + 1) % targets.length;
+                
+                // Déplacer le curseur
+                moveCursorTo(targets[currentStep]);
+            });
+        });
+    </script>
+</body>
+</html>
