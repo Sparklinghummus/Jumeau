@@ -1176,12 +1176,17 @@ function stopAudioCapture() {
 }
 
 function broadcastPillState(isActive) {
-    chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+    // Query all active tabs across all windows — avoids the MV3 service-worker
+    // edge-case where `currentWindow: true` returns nothing when DevTools or
+    // another OS window steals focus from the Chrome window.
+    chrome.tabs.query({ active: true }, (tabs) => {
         if (!tabs || tabs.length === 0) return;
-        chrome.tabs.sendMessage(tabs[0].id, {
-            type: 'UPDATE_PILL_STATE',
-            isActive: isActive
-        }).catch(() => {});
+        for (const tab of tabs) {
+            chrome.tabs.sendMessage(tab.id, {
+                type: 'UPDATE_PILL_STATE',
+                isActive: isActive
+            }).catch(() => {});
+        }
     });
 }
 

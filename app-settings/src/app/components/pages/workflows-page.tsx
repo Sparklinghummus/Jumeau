@@ -1,9 +1,9 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useNavigate, useParams } from "react-router";
 import { WorkflowCanvas } from "../workflow-canvas";
 import { DetailPanel } from "../detail-panel";
 import { BuilderPanel } from "../builder-panel";
-import type { WorkflowNode } from "../workflow-canvas";
+import type { WorkflowNode, WorkflowCanvasHandle } from "../workflow-canvas";
 import {
   GitBranch,
   Star,
@@ -22,6 +22,7 @@ export function WorkflowsPage() {
   const [selectedNode, setSelectedNode] = useState<WorkflowNode | null>(null);
   const [activeTab, setActiveTab] = useState<"editor" | "runs">("editor");
   const [showBuilder, setShowBuilder] = useState(true);
+  const canvasRef = useRef<WorkflowCanvasHandle>(null);
   const navigate = useNavigate();
   const { id } = useParams();
 
@@ -93,7 +94,9 @@ export function WorkflowsPage() {
               transition={{ duration: 0.2 }}
               className="overflow-hidden shrink-0"
             >
-              <BuilderPanel />
+              <BuilderPanel
+                onAddBlock={(block) => canvasRef.current?.addBlock(block.id)}
+              />
             </motion.div>
           )}
         </AnimatePresence>
@@ -129,8 +132,10 @@ export function WorkflowsPage() {
 
           {/* Canvas */}
           <WorkflowCanvas
+            ref={canvasRef}
             onSelectNode={setSelectedNode}
             selectedNodeId={selectedNode?.id ?? null}
+            showLive={activeTab === "runs"}
           />
         </div>
 

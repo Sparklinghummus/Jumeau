@@ -1,7 +1,14 @@
 {
   "permissions": {
     "allow": [
-      "Bash(bun run:*)"
+      "Bash(bun run:*)",
+      "Bash(grep -r \"halo\\\\|screenHalo\\\\|HALO\" /Users/luc/Downloads/Jumeau --include=*.jsx --include=*.tsx --include=*.ts --include=*.js --exclude-dir=node_modules)",
+      "Bash(xargs ls:*)",
+      "Bash(grep -r \"recorder-widget\\\\|recording-timer\\\\|waveform-visualizer\" /Users/luc/Downloads/Jumeau --include=*.tsx --include=*.ts --include=*.jsx --include=*.js)",
+      "Bash(npx tsc:*)",
+      "Bash(./node_modules/.bin/tsc --noEmit)",
+      "Bash(node_modules/.bin/tsc --noEmit)",
+      "Bash(node_modules/.bin/vite build:*)"
     ]
   }
 }

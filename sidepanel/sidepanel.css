@@ -674,6 +674,20 @@ body {
   transform: scale(0.92);
 }
 
+.trash-btn {
+  width: 34px;
+  height: 34px;
+  background-color: #f0ece4;
+}
+
+.trash-btn:hover {
+  background-color: #fee2e2;
+}
+
+.trash-btn:hover svg {
+  stroke: #ef4444;
+}
+
 .pause-btn {
   width: 34px;
   height: 34px;

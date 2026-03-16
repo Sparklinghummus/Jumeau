@@ -334,10 +334,9 @@ function injectScreenHalo() {
     // The halo works by having two layers (border and glow) that "inherit" the background 
     // from a common rotating background layer.
     wrapper.innerHTML = `
-        <div class="jumeau-halo-inner" style="position: absolute; inset: 0; overflow: hidden; pointer-events: none;">
-            <div class="jumeau-halo-layer"></div>
-            <div class="jumeau-halo-frame" style="position: absolute; inset: 0; background: conic-gradient(#ff0080, #ff4500, #ffd700, #00ff88, #00bfff, #a855f7, #ff0080); animation: jumeauHaloRotate 8s linear infinite; -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0); -webkit-mask-composite: xor; padding: 5px;"></div>
-            <div class="jumeau-halo-glow" style="position: absolute; inset: -15px; background: conic-gradient(#ff0080, #ff4500, #ffd700, #00ff88, #00bfff, #a855f7, #ff0080); animation: jumeauHaloRotate 8s linear infinite; -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0); -webkit-mask-composite: xor; padding: 20px; filter: blur(15px); opacity: 0.7;"></div>
+        <div class="jumeau-halo-inner" style="position: absolute; inset: 0; pointer-events: none;">
+            <div class="jumeau-halo-frame" style="position: absolute; inset: 0; background: conic-gradient(#ff0080, #ff4500, #ffd700, #00ff88, #00bfff, #a855f7, #ff0080); animation: jumeauHaloRotate 8s linear infinite; -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0); -webkit-mask-composite: xor; mask-composite: exclude; padding: 5px;"></div>
+            <div class="jumeau-halo-glow" style="position: absolute; inset: -15px; background: conic-gradient(#ff0080, #ff4500, #ffd700, #00ff88, #00bfff, #a855f7, #ff0080); animation: jumeauHaloRotate 8s linear infinite; -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0); -webkit-mask-composite: xor; mask-composite: exclude; padding: 20px; filter: blur(15px); opacity: 0.7;"></div>
         </div>
     `;
 

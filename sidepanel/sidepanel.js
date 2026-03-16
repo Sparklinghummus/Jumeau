@@ -361,6 +361,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const waveformVisualizer = document.querySelector('.waveform-visualizer');
     const recorderPauseBtn = document.getElementById('recorder-pause-btn');
     const recorderStopBtn = document.getElementById('recorder-stop-btn');
+    const recorderTrashBtn = document.getElementById('recorder-trash-btn');
     const recordingDot = document.querySelector('.recording-dot');
     const recordingLabel = document.querySelector('.recording-label');
     
@@ -444,6 +445,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if(recorderStopBtn) {
         recorderStopBtn.addEventListener('click', () => {
+            chrome.runtime.sendMessage({ type: 'TOGGLE_AUDIO' });
+        });
+    }
+
+    if(recorderTrashBtn) {
+        recorderTrashBtn.addEventListener('click', () => {
+            if (!isRecordingUi) return;
             chrome.runtime.sendMessage({ type: 'TOGGLE_AUDIO' });
         });
     }
