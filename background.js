@@ -1190,6 +1190,18 @@ function broadcastPillState(isActive) {
     });
 }
 
+function broadcastVoiceActivity(level) {
+  chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+    if (!tabs || tabs.length === 0) return;
+    chrome.tabs
+      .sendMessage(tabs[0].id, {
+        type: "UPDATE_VOICE_ACTIVITY",
+        level,
+      })
+      .catch(() => {});
+  });
+}
+
 // ============================================================================
 // BOUCLE AUTO-CAPTURE D'ÉCRAN (1 image/sec)
 // ============================================================================

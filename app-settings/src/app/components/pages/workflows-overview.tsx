@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router";
 import {
   GitBranch,
@@ -19,6 +20,13 @@ import {
   Users,
 } from "lucide-react";
 import { motion } from "motion/react";
+import {
+  countWorkflowBranches,
+  formatRelativeTime,
+  readLiveCanvasState,
+  subscribeToLiveCanvasState,
+  type PersistedWorkflow,
+} from "../../lib/live-workflows";
 
 interface WorkflowSummary {
   id: string;
@@ -150,11 +158,85 @@ function StatusBadge({ status }: { status: WorkflowSummary["status"] }) {
   );
 }
 
+function getWorkflowVisual(workflow: PersistedWorkflow) {
+  const hasVoiceTrigger = workflow.nodes.some((node) => node.type === "trigger" && node.category === "Voice");
+  const hasAiAction = workflow.nodes.some((node) => node.category === "AI");
+  const hasIntegration = workflow.nodes.some((node) => node.category === "Integrations");
+
+  if (hasVoiceTrigger) {
+    return { icon: Mic, iconColor: "text-blue-600", iconBg: "bg-blue-100", tags: ["Voice"] };
+  }
+
+  if (hasAiAction) {
+    return { icon: Sparkles, iconColor: "text-amber-600", iconBg: "bg-amber-100", tags: ["AI"] };
+  }
+
+  if (hasIntegration) {
+    return { icon: Zap, iconColor: "text-violet-600", iconBg: "bg-violet-100", tags: ["Integrations"] };
+  }
+
+  return { icon: GitBranch, iconColor: "text-emerald-600", iconBg: "bg-emerald-100", tags: ["Workflow"] };
+}
+
+function toWorkflowSummary(workflow: PersistedWorkflow): WorkflowSummary {
+  const visual = getWorkflowVisual(workflow);
+  const hasRunningNode = workflow.nodes.some((node) => node.status === "running");
+  const status: WorkflowSummary["status"] =
+    workflow.status === "archived" ? "paused" : workflow.status === "published" || hasRunningNode ? "active" : "draft";
+
+  const dynamicTags = Array.from(
+    new Set([
+      ...visual.tags,
+      ...workflow.nodes
+        .map((node) => node.category)
+        .filter((category) => category === "AI" || category === "Voice" || category === "Integrations"),
+    ]),
+  ).slice(0, 3);
+
+  return {
+    id: workflow.id,
+    name: workflow.title,
+    description: workflow.summary || workflow.goal || "Workflow captured from the sidepanel.",
+    icon: visual.icon,
+    iconColor: visual.iconColor,
+    iconBg: visual.iconBg,
+    status,
+    nodeCount: workflow.nodes.length,
+    lastEdited: formatRelativeTime(workflow.updatedAt),
+    lastRun: hasRunningNode ? "now" : undefined,
+    runCount: countWorkflowBranches(workflow),
+    successRate: undefined,
+    tags: dynamicTags.length ? dynamicTags : ["Workflow"],
+  };
+}
+
 export function WorkflowsOverview() {
   const navigate = useNavigate();
+  const [liveWorkflows, setLiveWorkflows] = useState<PersistedWorkflow[]>([]);
 
-  const activeCount = workflows.filter((w) => w.status === "active").length;
-  const totalRuns = workflows.reduce((sum, w) => sum + w.runCount, 0);
+  useEffect(() => {
+    let isMounted = true;
+
+    readLiveCanvasState().then((state) => {
+      if (isMounted) {
+        setLiveWorkflows(state.workflows);
+      }
+    });
+
+    const unsubscribe = subscribeToLiveCanvasState((state) => {
+      setLiveWorkflows(state.workflows);
+    });
+
+    return () => {
+      isMounted = false;
+      unsubscribe();
+    };
+  }, []);
+
+  const workflowItems = liveWorkflows.length ? liveWorkflows.map(toWorkflowSummary) : workflows;
+
+  const activeCount = workflowItems.filter((w) => w.status === "active").length;
+  const totalRuns = workflowItems.reduce((sum, w) => sum + w.runCount, 0);
 
   return (
     <div className="flex flex-col h-full bg-background">
@@ -165,7 +247,7 @@ export function WorkflowsOverview() {
             <div>
               <h1 className="text-foreground mb-1">Workflows</h1>
               <p className="text-muted-foreground">
-                {workflows.length} workflows · {activeCount} active · {totalRuns} total runs
+                {workflowItems.length} workflows · {activeCount} active · {totalRuns} total runs
               </p>
             </div>
             <button
@@ -202,7 +284,7 @@ export function WorkflowsOverview() {
 
           {/* Workflow cards */}
           <div className="flex flex-col gap-3">
-            {workflows.map((wf, i) => (
+            {workflowItems.map((wf, i) => (
               <motion.div
                 key={wf.id}
                 initial={{ opacity: 0, y: 8 }}

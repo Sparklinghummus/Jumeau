@@ -1,7 +1,7 @@
 /* Isolés dans le Shadow DOM */
 .jumeau-container {
     position: fixed;
-    bottom: 15px; /* Pill rabaissée */
+    bottom: 7px;
     left: 50%;
     transform: translateX(-50%);
     display: flex;
