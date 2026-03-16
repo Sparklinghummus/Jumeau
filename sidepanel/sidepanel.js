@@ -7,6 +7,14 @@ document.addEventListener('DOMContentLoaded', () => {
     const pipelineProgressFill = document.getElementById('pipeline-progress-fill');
     const pipelineScroll = document.getElementById('pipeline-scroll');
     const openEditorBtn = document.getElementById('openEditorBtn');
+    const settingsBtn = document.getElementById('settingsBtn');
+    const closeBtn = document.getElementById('closeBtn');
+    const runAgentBtn = document.getElementById('runAgentBtn');
+    const exportMcpBtn = document.getElementById('exportMcpBtn');
+    const agentIntentInput = document.getElementById('agentIntentInput');
+    const cloudConsoleBadge = document.getElementById('cloud-console-badge');
+    const cloudConsoleResult = document.getElementById('cloudConsoleResult');
+    const mcpUrlLink = document.getElementById('mcpUrlLink');
 
     let canvasState = normalizeState();
 
@@ -197,6 +205,26 @@ document.addEventListener('DOMContentLoaded', () => {
         renderPipeline();
     }
 
+    function setCloudStatus(label, tone) {
+        cloudConsoleBadge.textContent = label;
+        cloudConsoleBadge.className = `cloud-console-badge ${tone}`;
+    }
+
+    function setCloudResult(text, mcpUrl = '') {
+        cloudConsoleResult.textContent = text;
+
+        if (mcpUrl) {
+            mcpUrlLink.href = mcpUrl;
+            mcpUrlLink.textContent = mcpUrl;
+            mcpUrlLink.classList.remove('hidden');
+            return;
+        }
+
+        mcpUrlLink.href = '#';
+        mcpUrlLink.textContent = '';
+        mcpUrlLink.classList.add('hidden');
+    }
+
     // ── Hydrate initial state from extension background ──
     function hydrateInitialState() {
         chrome.runtime.sendMessage({ type: 'GET_LIVE_CANVAS_STATE' }, (response) => {
@@ -218,6 +246,76 @@ document.addEventListener('DOMContentLoaded', () => {
     // ── Open the full app ──
     openEditorBtn.addEventListener('click', () => {
         chrome.tabs.create({ url: chrome.runtime.getURL('app-react/index.html#/workflows') });
+    });
+
+    settingsBtn?.addEventListener('click', () => {
+        chrome.runtime.openOptionsPage();
+    });
+
+    closeBtn?.addEventListener('click', async () => {
+        if (!chrome.sidePanel?.close) {
+            return;
+        }
+
+        const currentWindow = await chrome.windows.getCurrent();
+        chrome.sidePanel.close({ windowId: currentWindow.id });
+    });
+
+    runAgentBtn?.addEventListener('click', () => {
+        const userIntent = agentIntentInput.value.trim();
+        setCloudStatus('Running', 'running');
+        setCloudResult('Calling the Cloud Run orchestrator and waiting for one action...');
+
+        chrome.runtime.sendMessage({
+            type: 'MVP_RUN_AGENT',
+            userIntent
+        }, (response) => {
+            if (chrome.runtime.lastError) {
+                setCloudStatus('Error', 'error');
+                setCloudResult(chrome.runtime.lastError.message);
+                return;
+            }
+
+            if (!response?.ok) {
+                setCloudStatus('Error', 'error');
+                setCloudResult(response?.error || 'Unknown orchestrator error.');
+                return;
+            }
+
+            const action = response.action || {};
+            const execution = response.execution?.result;
+            const resultText = execution?.selector
+                ? `Action: ${action.action} on ${execution.selector}. ${action.reason || ''}`.trim()
+                : `Action: ${action.action}. ${action.reason || ''}`.trim();
+
+            setCloudStatus('Success', 'success');
+            setCloudResult(resultText);
+        });
+    });
+
+    exportMcpBtn?.addEventListener('click', () => {
+        setCloudStatus('Running', 'running');
+        setCloudResult('Generating the weather MCP bundle and asking the deployer to ship it...');
+
+        chrome.runtime.sendMessage({
+            type: 'MVP_EXPORT_WEATHER_MCP',
+            name: 'weather-mcp'
+        }, (response) => {
+            if (chrome.runtime.lastError) {
+                setCloudStatus('Error', 'error');
+                setCloudResult(chrome.runtime.lastError.message);
+                return;
+            }
+
+            if (!response?.ok) {
+                setCloudStatus('Error', 'error');
+                setCloudResult(response?.error || 'Unknown MCP deploy error.');
+                return;
+            }
+
+            setCloudStatus('Success', 'success');
+            setCloudResult(`MCP deployed as ${response.serviceName}. Paste this URL into Claude or Cowork:`, response.mcpUrl);
+        });
     });
 
     // ── Update badge from recording status ──
@@ -354,6 +452,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Initial render
     renderCanvasState();
+    setCloudStatus('Idle', 'idle');
     hydrateInitialState();
 
     // ── Recorder UI Logic ──

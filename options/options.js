@@ -1,5 +1,7 @@
 document.addEventListener('DOMContentLoaded', () => {
     const apiKeyInput = document.getElementById('apiKey');
+    const orchestratorUrlInput = document.getElementById('orchestratorUrl');
+    const mcpDeployerUrlInput = document.getElementById('mcpDeployerUrl');
     const saveBtn = document.getElementById('saveBtn');
     const micBtn = document.getElementById('micBtn');
     const saveHint = document.getElementById('saveHint');
@@ -12,6 +14,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Load existing key
     chrome.storage.local.get(['apiKey'], (result) => {
+    // Load existing key if there is one
+    chrome.storage.local.get(['apiKey', 'orchestratorUrl', 'mcpDeployerUrl'], (result) => {
         if (result.apiKey) {
             apiKeyInput.value = result.apiKey;
             setApiKeyDone(true);
@@ -65,6 +69,14 @@ document.addEventListener('DOMContentLoaded', () => {
             console.error('Mic access error:', err);
             showToast(getMicrophoneErrorMessage(err), true);
         }
+
+        if (result.orchestratorUrl) {
+            orchestratorUrlInput.value = result.orchestratorUrl;
+        }
+
+        if (result.mcpDeployerUrl) {
+            mcpDeployerUrlInput.value = result.mcpDeployerUrl;
+        }
     });
 
     saveBtn.addEventListener('click', () => {
@@ -79,6 +91,62 @@ document.addEventListener('DOMContentLoaded', () => {
         statusToast.style.background = isError ? '#ef4444' : '#111111';
         statusToast.classList.add('visible');
         setTimeout(() => statusToast.classList.remove('visible'), 2500);
+        const orchestratorUrl = orchestratorUrlInput.value.trim();
+        const mcpDeployerUrl = mcpDeployerUrlInput.value.trim();
+        
+        chrome.storage.local.set({
+            apiKey: key,
+            orchestratorUrl,
+            mcpDeployerUrl
+        }, () => {
+            // Show status
+            statusEl.classList.add('visible');
+            setTimeout(() => {
+                statusEl.classList.remove('visible');
+            }, 2000);
+        });
+    });
+
+    micBtn.addEventListener('click', async () => {
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            stream.getTracks().forEach(track => track.stop());
+            micBtn.textContent = 'Micro Autorisé ✓';
+            micBtn.style.backgroundColor = '#10b981';
+            micBtn.style.color = 'white';
+            setStatus('Accès micro autorisé.', '#10b981');
+        } catch (err) {
+            console.error('Erreur accès micro:', err);
+            micBtn.textContent = 'Erreur Micro ❌';
+            micBtn.style.backgroundColor = '#ef4444';
+            micBtn.style.color = 'white';
+            setStatus(getMicrophoneErrorMessage(err), '#ef4444');
+        }
+    });
+
+    // Also save on Enter press
+    apiKeyInput.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') {
+            saveBtn.click();
+        }
+    });
+
+    orchestratorUrlInput.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') {
+            saveBtn.click();
+        }
+    });
+
+    mcpDeployerUrlInput.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') {
+            saveBtn.click();
+        }
+    });
+
+    function setStatus(message, color) {
+        statusEl.textContent = message;
+        statusEl.style.color = color;
+        statusEl.classList.add('visible');
     }
 
     function getMicrophoneErrorMessage(error) {

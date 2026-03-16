@@ -267,6 +267,31 @@
             opacity: 1;
             transform: translateX(-50%) translateY(0);
         }
+
+        .section {
+            margin-top: 36px;
+        }
+
+        .section h2 {
+            font-size: 16px;
+            color: #111111;
+            margin-bottom: 18px;
+            font-weight: 600;
+            letter-spacing: -0.3px;
+        }
+
+        .field {
+            margin-bottom: 18px;
+        }
+
+        .field label {
+            display: block;
+            font-size: 12px;
+            color: #777777;
+            margin-bottom: 6px;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+        }
     </style>
 </head>
 <body>
@@ -330,6 +355,37 @@
         <!-- Footer -->
         <div class="footer">Jumeau · Chrome Extension</div>
 
+    <div class="container">
+        <h1>Live Setup</h1>
+        <p style="margin-top:-18px; margin-bottom:24px; color:#666; font-size:14px; line-height:1.5;">
+            Preferred mode: set the two Cloud Run URLs below. The local Gemini API key is only needed if you want to bypass Cloud Run and connect directly from the extension.
+        </p>
+        
+        <div class="input-group">
+            <input type="password" id="apiKey" placeholder="AIzaSy..." autocomplete="off" spellcheck="false">
+        </div>
+
+        <div class="section">
+            <h2>Cloud Run URLs</h2>
+
+            <div class="field">
+                <label for="orchestratorUrl">Orchestrator URL</label>
+                <div class="input-group">
+                    <input type="text" id="orchestratorUrl" placeholder="https://jumeau-agent-orchestrator-xyz.a.run.app" autocomplete="off" spellcheck="false">
+                </div>
+            </div>
+
+            <div class="field">
+                <label for="mcpDeployerUrl">MCP Deployer URL</label>
+                <div class="input-group">
+                    <input type="text" id="mcpDeployerUrl" placeholder="https://jumeau-mcp-export-xyz.a.run.app" autocomplete="off" spellcheck="false">
+                </div>
+            </div>
+        </div>
+
+        <button id="saveBtn">Save Setup</button>
+        <button id="micBtn" style="margin-right: 12px; background-color: #f3f4f6; color: #111;">Autoriser le Micro</button>
+        <div id="status" class="status">Saved successfully.</div>
     </div>
 
     <div class="status-toast" id="statusToast"></div>

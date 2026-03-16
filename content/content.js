@@ -156,6 +156,25 @@ function injectPill() {
         } else if (message.type === 'UPDATE_PILL_STATE') {
             isPillActive = message.isActive;
             updatePillUI(pill, isPillActive);
+        } else if (message.type === 'MVP_GET_PAGE_CONTEXT') {
+            sendResponse({
+                ok: true,
+                context: collectPageContext()
+            });
+            return false;
+        } else if (message.type === 'MVP_EXECUTE_ACTION') {
+            executeAgentAction(message.action).then((result) => {
+                sendResponse({
+                    ok: true,
+                    result
+                });
+            }).catch((error) => {
+                sendResponse({
+                    ok: false,
+                    error: error.message
+                });
+            });
+            return true;
         } else if (message.type === 'PROCESS_IMAGE_WITH_GRID') {
             processImageWithGrid(message.dataUrl).then(processedDataUrl => {
                 sendResponse({ success: true, dataUrl: processedDataUrl });
@@ -367,6 +386,153 @@ if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', injectScreenHalo);
 } else {
     injectScreenHalo();
+function collectPageContext() {
+    return {
+        url: window.location.href,
+        title: document.title,
+        domSummary: buildDomSummary()
+    };
+}
+
+function buildDomSummary() {
+    const selectors = [
+        'button',
+        'a[href]',
+        'input',
+        'textarea',
+        'select',
+        '[role="button"]'
+    ];
+
+    const summaryLines = [];
+    const elements = document.querySelectorAll(selectors.join(','));
+
+    for (const element of elements) {
+        if (summaryLines.length >= 20) {
+            break;
+        }
+
+        if (!isElementVisible(element)) {
+            continue;
+        }
+
+        const label = extractElementLabel(element);
+        if (!label) {
+            continue;
+        }
+
+        const tagName = element.tagName.toLowerCase();
+        summaryLines.push(`${tagName}: ${label}`);
+    }
+
+    return summaryLines.join(' | ') || 'No visible interactive elements found.';
+}
+
+function isElementVisible(element) {
+    const rect = element.getBoundingClientRect();
+    return rect.width > 0 && rect.height > 0;
+}
+
+function extractElementLabel(element) {
+    const text = [
+        element.getAttribute('aria-label'),
+        element.getAttribute('placeholder'),
+        element.getAttribute('name'),
+        element.getAttribute('id'),
+        element.innerText,
+        element.value
+    ].find((value) => typeof value === 'string' && value.trim());
+
+    if (!text) {
+        return '';
+    }
+
+    return text.trim().replace(/\s+/g, ' ').slice(0, 120);
+}
+
+async function executeAgentAction(action = {}) {
+    switch (action.action) {
+        case 'click':
+            return clickElement(action.selector);
+        case 'type':
+            return typeIntoElement(action.selector, action.text);
+        case 'scroll':
+            window.scrollBy({
+                top: Number(action.deltaY || 500),
+                behavior: 'smooth'
+            });
+            return {
+                action: 'scroll',
+                deltaY: Number(action.deltaY || 500)
+            };
+        case 'wait':
+            await new Promise((resolve) => setTimeout(resolve, Number(action.delayMs || 1000)));
+            return {
+                action: 'wait',
+                delayMs: Number(action.delayMs || 1000)
+            };
+        case 'navigate':
+            if (!action.url) {
+                throw new Error('Missing URL for navigate action.');
+            }
+
+            window.location.assign(action.url);
+            return {
+                action: 'navigate',
+                url: action.url
+            };
+        case 'done':
+            return {
+                action: 'done'
+            };
+        default:
+            throw new Error(`Unsupported action: ${action.action}`);
+    }
+}
+
+function clickElement(selector) {
+    if (!selector) {
+        throw new Error('Missing selector for click action.');
+    }
+
+    const element = document.querySelector(selector);
+    if (!element) {
+        throw new Error(`Element not found for selector: ${selector}`);
+    }
+
+    drawHighlight(selector);
+    element.click();
+    return {
+        action: 'click',
+        selector
+    };
+}
+
+function typeIntoElement(selector, text) {
+    if (!selector) {
+        throw new Error('Missing selector for type action.');
+    }
+
+    const element = document.querySelector(selector);
+    if (!element) {
+        throw new Error(`Element not found for selector: ${selector}`);
+    }
+
+    if (!('value' in element)) {
+        throw new Error(`Element is not writable: ${selector}`);
+    }
+
+    drawHighlight(selector);
+    element.focus();
+    element.value = text || '';
+    element.dispatchEvent(new Event('input', { bubbles: true }));
+    element.dispatchEvent(new Event('change', { bubbles: true }));
+
+    return {
+        action: 'type',
+        selector,
+        text: text || ''
+    };
 }
 
 // ============================================================================

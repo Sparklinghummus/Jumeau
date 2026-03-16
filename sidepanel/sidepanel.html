@@ -79,6 +79,24 @@
             </svg>
           </button>
         </div>
+      <div class="pipeline-footer">
+        <div class="cloud-console">
+          <div class="cloud-console-header">
+            <span class="cloud-console-title">Cloud MVP</span>
+            <span class="cloud-console-badge idle" id="cloud-console-badge">Idle</span>
+          </div>
+          <textarea id="agentIntentInput" class="cloud-console-input" placeholder="What should the cloud agent do on this page?">Analyze the current page and choose the next safe browser action.</textarea>
+          <div class="cloud-console-actions">
+            <button id="runAgentBtn" class="cloud-console-btn">Run Agent</button>
+            <button id="exportMcpBtn" class="cloud-console-btn secondary">Export Weather MCP</button>
+          </div>
+          <div id="cloudConsoleResult" class="cloud-console-result">Set the two Cloud Run URLs in settings, then test one agent turn and one MCP export.</div>
+          <a id="mcpUrlLink" class="cloud-console-link hidden" href="#" target="_blank" rel="noreferrer"></a>
+        </div>
+        <button id="openEditorBtn">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+          Open in Pipeline Editor
+        </button>
       </div>
 
     </div>
