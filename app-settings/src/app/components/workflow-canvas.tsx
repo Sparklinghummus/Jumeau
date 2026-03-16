@@ -1,19 +1,25 @@
 import { useState } from "react";
 import {
   Mic,
-  Filter,
   CheckSquare,
   GitBranch,
   Database,
   List,
-  Check,
-  Circle,
   AlertTriangle,
   MessageSquare,
   Play,
   Plus,
+  Mail,
+  Sheet,
+  Slack,
+  NotebookPen,
+  FolderOpen,
+  Calendar,
+  Table2,
+  Cloud,
 } from "lucide-react";
 import { motion } from "motion/react";
+import type { PersistedWorkflowNode } from "../lib/live-workflows";
 
 export interface WorkflowNode {
   id: string;
@@ -106,6 +112,186 @@ const initialNodes: WorkflowNode[] = [
 interface WorkflowCanvasProps {
   onSelectNode: (node: WorkflowNode | null) => void;
   selectedNodeId: string | null;
+  nodes?: PersistedWorkflowNode[];
+  entryNodeId?: string | null;
+}
+
+function getIntegrationVisual(integration: string) {
+  switch (integration) {
+    case "gmail":
+      return { icon: Mail, iconColor: "text-red-600", iconBg: "bg-red-100", category: "Integrations" };
+    case "google-sheets":
+      return { icon: Sheet, iconColor: "text-emerald-600", iconBg: "bg-emerald-100", category: "Integrations" };
+    case "slack":
+      return { icon: Slack, iconColor: "text-fuchsia-600", iconBg: "bg-fuchsia-100", category: "Integrations" };
+    case "notion":
+      return { icon: NotebookPen, iconColor: "text-slate-700", iconBg: "bg-slate-100", category: "Integrations" };
+    case "google-drive":
+      return { icon: FolderOpen, iconColor: "text-blue-600", iconBg: "bg-blue-100", category: "Integrations" };
+    case "calendar":
+      return { icon: Calendar, iconColor: "text-orange-600", iconBg: "bg-orange-100", category: "Integrations" };
+    case "airtable":
+      return { icon: Table2, iconColor: "text-cyan-600", iconBg: "bg-cyan-100", category: "Integrations" };
+    case "amazon-s3":
+      return { icon: Cloud, iconColor: "text-amber-700", iconBg: "bg-amber-100", category: "Integrations" };
+    default:
+      return null;
+  }
+}
+
+function toCanvasNode(node: PersistedWorkflowNode): WorkflowNode {
+  if (node.type === "trigger") {
+    return {
+      id: node.id,
+      type: node.type,
+      icon: Mic,
+      iconColor: "text-blue-600",
+      iconBg: "bg-blue-100",
+      title: node.title,
+      category: node.category || "Voice",
+      description: node.description,
+      status: node.status,
+      children: node.children,
+    };
+  }
+
+  if (node.type === "condition") {
+    return {
+      id: node.id,
+      type: node.type,
+      icon: AlertTriangle,
+      iconColor: "text-amber-500",
+      iconBg: "bg-amber-100",
+      title: node.title,
+      category: node.category || "Condition",
+      description: node.description,
+      status: node.status,
+      children: node.children,
+    };
+  }
+
+  if (node.type === "branch") {
+    return {
+      id: node.id,
+      type: node.type,
+      icon: GitBranch,
+      iconColor: "text-violet-600",
+      iconBg: "bg-violet-100",
+      title: node.title,
+      category: node.category || "Condition",
+      description: node.description,
+      status: node.status,
+      children: node.children,
+      branchLabels: node.branchLabels,
+    };
+  }
+
+  const integration = String(node.params?.integration || "").toLowerCase();
+  const integrationVisual = getIntegrationVisual(integration);
+  if (integrationVisual) {
+    return {
+      id: node.id,
+      type: node.type,
+      icon: integrationVisual.icon,
+      iconColor: integrationVisual.iconColor,
+      iconBg: integrationVisual.iconBg,
+      title: node.title,
+      category: node.category || integrationVisual.category,
+      description: node.description,
+      status: node.status,
+      children: node.children,
+    };
+  }
+
+  if (node.category === "AI") {
+    return {
+      id: node.id,
+      type: node.type,
+      icon: MessageSquare,
+      iconColor: "text-emerald-600",
+      iconBg: "bg-emerald-100",
+      title: node.title,
+      category: node.category,
+      description: node.description,
+      status: node.status,
+      children: node.children,
+    };
+  }
+
+  if (node.category === "Records") {
+    return {
+      id: node.id,
+      type: node.type,
+      icon: Database,
+      iconColor: "text-blue-600",
+      iconBg: "bg-blue-100",
+      title: node.title,
+      category: node.category,
+      description: node.description,
+      status: node.status,
+      children: node.children,
+    };
+  }
+
+  if (node.category === "Lists") {
+    return {
+      id: node.id,
+      type: node.type,
+      icon: List,
+      iconColor: "text-violet-600",
+      iconBg: "bg-violet-100",
+      title: node.title,
+      category: node.category,
+      description: node.description,
+      status: node.status,
+      children: node.children,
+    };
+  }
+
+  return {
+    id: node.id,
+    type: node.type,
+    icon: CheckSquare,
+    iconColor: "text-slate-600",
+    iconBg: "bg-slate-100",
+    title: node.title,
+    category: node.category || "Actions",
+    description: node.description,
+    status: node.status,
+    children: node.children,
+  };
+}
+
+function findEntryNodeId(nodes: WorkflowNode[], entryNodeId?: string | null) {
+  if (entryNodeId && nodes.some((node) => node.id === entryNodeId)) {
+    return entryNodeId;
+  }
+
+  return nodes.find((node) => node.type === "trigger")?.id || nodes[0]?.id || null;
+}
+
+function buildLinearChain(nodeMap: Record<string, WorkflowNode>, startNodeId: string | null) {
+  const chain: string[] = [];
+  const visited = new Set<string>();
+  let currentNodeId = startNodeId;
+
+  while (currentNodeId && !visited.has(currentNodeId)) {
+    const node = nodeMap[currentNodeId];
+    if (!node) {
+      break;
+    }
+
+    chain.push(currentNodeId);
+    visited.add(currentNodeId);
+
+    if (node.type === "branch" || !node.children?.length) {
+      break;
+    }
+
+    currentNodeId = node.children[0] || null;
+  }
+
+  return chain;
 }
 
 function StatusDot({ status }: { status?: string }) {
@@ -226,13 +412,16 @@ function VerticalConnector() {
 export function WorkflowCanvas({
   onSelectNode,
   selectedNodeId,
+  nodes,
+  entryNodeId,
 }: WorkflowCanvasProps) {
-  const nodeMap = Object.fromEntries(initialNodes.map((n) => [n.id, n]));
+  const resolvedNodes = nodes?.length ? nodes.map(toCanvasNode) : initialNodes;
+  const nodeMap = Object.fromEntries(resolvedNodes.map((n) => [n.id, n]));
 
-  // Render the main linear chain (nodes 1→2→3→4)
-  // Then handle branching separately
-  const linearChain = ["1", "2", "3", "4"];
-  const branchNode = nodeMap["4"];
+  const startNodeId = findEntryNodeId(resolvedNodes, entryNodeId);
+  const linearChain = buildLinearChain(nodeMap, startNodeId);
+  const branchCandidate = linearChain.length ? nodeMap[linearChain[linearChain.length - 1]] : null;
+  const branchNode = branchCandidate?.type === "branch" ? branchCandidate : null;
 
   return (
     <div

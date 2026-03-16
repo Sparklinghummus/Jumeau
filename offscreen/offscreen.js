@@ -11,8 +11,11 @@ let workletNode = null;
 let silentGainNode = null;
 let playbackEndTimer = null;
 let isPlaybackActive = false;
+let smoothedMicLevel = 0;
+let lastMicLevelSentAt = 0;
 
 let isMuted = false;
+const MIC_ACTIVITY_INTERVAL_MS = 80;
 
 function notifyPlaybackStarted() {
     if (isPlaybackActive) return;
@@ -41,6 +44,39 @@ function schedulePlaybackEnd() {
         }
         notifyPlaybackEnded();
     }, remainingMs + 50);
+}
+
+function updateMicActivity(rawLevel) {
+    const normalizedLevel = Math.max(0, Math.min(1, Number(rawLevel) || 0));
+    smoothedMicLevel = (smoothedMicLevel * 0.78) + (normalizedLevel * 0.22);
+
+    const now = Date.now();
+    if (now - lastMicLevelSentAt < MIC_ACTIVITY_INTERVAL_MS) {
+        return;
+    }
+
+    lastMicLevelSentAt = now;
+    chrome.runtime.sendMessage({
+        type: 'MIC_ACTIVITY',
+        level: smoothedMicLevel
+    }).catch(() => {});
+}
+
+function computeMicLevel(float32Array) {
+    if (!float32Array || float32Array.length === 0) {
+        return 0;
+    }
+
+    let sumSquares = 0;
+    for (let i = 0; i < float32Array.length; i++) {
+        const sample = float32Array[i];
+        sumSquares += sample * sample;
+    }
+
+    const rms = Math.sqrt(sumSquares / float32Array.length);
+    const gated = Math.max(0, rms - 0.012);
+    const boosted = Math.min(1, gated * 10);
+    return Math.pow(boosted, 0.85);
 }
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
@@ -99,9 +135,11 @@ async function startRecording() {
         silentGainNode.gain.value = 0;
 
         workletNode.port.onmessage = (event) => {
+            const float32Array = event.data;
+            updateMicActivity(isMuted ? 0 : computeMicLevel(float32Array));
+
             if (isMuted) return; // Mute state: on n'envoie pas le chunk
 
-            const float32Array = event.data;
             const downsampled = downsampleBuffer(float32Array, audioContext.sampleRate, TARGET_SAMPLE_RATE);
             
             // Convertir Float32 (-1.0 à 1.0) en Int16 (-32768 à 32767)
@@ -167,6 +205,9 @@ function stopPlaybackAndRecording() {
     }
     audioContext = null;
     nextPlayTime = 0; // Réinitialiser le temps de lecture
+    smoothedMicLevel = 0;
+    lastMicLevelSentAt = 0;
+    chrome.runtime.sendMessage({ type: 'MIC_ACTIVITY', level: 0 }).catch(() => {});
     notifyPlaybackEnded();
     console.log("Capture audio PCM arrêtée.");
 }

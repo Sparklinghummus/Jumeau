@@ -7,6 +7,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const pipelineProgressFill = document.getElementById('pipeline-progress-fill');
     const pipelineScroll = document.getElementById('pipeline-scroll');
     const openEditorBtn = document.getElementById('openEditorBtn');
+    const clearContextBtn = document.getElementById('clearContextBtn');
     const settingsBtn = document.getElementById('settingsBtn');
     const closeBtn = document.getElementById('closeBtn');
     const runAgentBtn = document.getElementById('runAgentBtn');
@@ -18,19 +19,17 @@ document.addEventListener('DOMContentLoaded', () => {
 
     let canvasState = normalizeState();
 
-    // ── Block type → emoji icon mapping ──
-    const typeIcons = {
-        core:      '📋',
-        condition: '⚡',
-        ai:        '🧠',
-        records:   '📁',
-        action:    '🚀',
-        trigger:   '🔔',
-        observe:   '👁️',
-        decision:  '⚡',
-        output:    '📤',
-        question:  '❓',
-        default:   '📦'
+    const iconSprite = {
+        trigger: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a4 4 0 0 0-4 4v2.2c0 1.2-.4 2.3-1.2 3.2L5 14.5h14l-1.8-2.1A4.8 4.8 0 0 1 16 9.2V7a4 4 0 0 0-4-4Z"/><path d="M10 18a2 2 0 0 0 4 0"/></svg>',
+        condition: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M10.3 3.7 3.7 10.3a2 2 0 0 0 0 2.8l6.6 6.6a2 2 0 0 0 2.8 0l6.6-6.6a2 2 0 0 0 0-2.8l-6.6-6.6a2 2 0 0 0-2.8 0Z"/><path d="M12 8v4"/><path d="M12 16h.01"/></svg>',
+        branch: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3v6"/><path d="M18 15v6"/><path d="M6 9c0 4 4 6 12 6"/><path d="M6 9c0 4 4 6 12 6"/><circle cx="6" cy="3" r="2"/><circle cx="18" cy="15" r="2"/><circle cx="18" cy="21" r="2"/></svg>',
+        action: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M13 4 5 14h6l-1 6 8-10h-6l1-6Z"/></svg>',
+        ai: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v4"/><path d="M12 18v4"/><path d="M4.9 4.9l2.8 2.8"/><path d="M16.3 16.3l2.8 2.8"/><path d="M2 12h4"/><path d="M18 12h4"/><path d="M4.9 19.1l2.8-2.8"/><path d="M16.3 7.7l2.8-2.8"/><circle cx="12" cy="12" r="4"/></svg>',
+        records: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="7" ry="3"/><path d="M5 5v14c0 1.7 3.1 3 7 3s7-1.3 7-3V5"/><path d="M5 12c0 1.7 3.1 3 7 3s7-1.3 7-3"/></svg>',
+        lists: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6h11"/><path d="M9 12h11"/><path d="M9 18h11"/><path d="M4 6h.01"/><path d="M4 12h.01"/><path d="M4 18h.01"/></svg>',
+        integrations: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M9 12a3 3 0 0 1 3-3h4"/><path d="M9 12a3 3 0 0 0 3 3h4"/><path d="M5 8h4"/><path d="M5 16h4"/><path d="M19 5v14"/><circle cx="5" cy="8" r="2"/><circle cx="5" cy="16" r="2"/><circle cx="19" cy="12" r="2"/></svg>',
+        output: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3h7v7"/><path d="M10 14 21 3"/><path d="M21 14v4a3 3 0 0 1-3 3H6a3 3 0 0 1-3-3V6a3 3 0 0 1 3-3h4"/></svg>',
+        default: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="3"/><path d="M9 12h6"/></svg>'
     };
 
     // ── Normalise incoming state ──
@@ -63,17 +62,53 @@ document.addEventListener('DOMContentLoaded', () => {
     // ── Count branches (nodes of type condition / decision) ──
     function countBranches(nodes) {
         return (nodes || []).filter(n =>
-            ['condition', 'decision'].includes((n.type || '').toLowerCase())
+            ['condition', 'decision', 'branch'].includes((n.type || '').toLowerCase())
         ).length;
+    }
+
+    function getNodeTone(node) {
+        const type = String(node.type || '').toLowerCase();
+        const category = String(node.category || '').toLowerCase();
+
+        if (type === 'trigger') return 'trigger';
+        if (type === 'condition') return 'condition';
+        if (type === 'branch' || type === 'decision') return 'branch';
+        if (category === 'ai') return 'ai';
+        if (category === 'records') return 'records';
+        if (category === 'lists') return 'lists';
+        if (category === 'integrations') return 'integrations';
+        if (type === 'output') return 'output';
+        return 'action';
+    }
+
+    function getNodeIcon(node) {
+        const tone = getNodeTone(node);
+        return iconSprite[tone] || iconSprite.default;
+    }
+
+    function getNodeTypeLabel(node) {
+        const type = String(node.type || 'action').toLowerCase();
+        if (type === 'trigger') return 'Trigger';
+        if (type === 'condition') return 'Condition';
+        if (type === 'branch' || type === 'decision') return 'Branch';
+        return 'Action';
     }
 
     // ── Determine block status ──
     // Nodes can carry their own status: "done" | "running" | "pending"
     // Fallback: first node is done, rest are pending
     function getBlockStatus(node, index, nodes) {
-        if (node.status) return node.status.toLowerCase();
+        if (node.status) {
+            const normalized = String(node.status).toLowerCase();
+            if (normalized === 'completed') return 'done';
+            if (normalized === 'running') return 'running';
+            return 'pending';
+        }
         // Auto-derive: everything before the first non-done is done
-        const firstPendingIdx = nodes.findIndex(n => n.status && n.status !== 'done');
+        const firstPendingIdx = nodes.findIndex((n) => {
+            const normalized = String(n.status || '').toLowerCase();
+            return normalized && normalized !== 'done' && normalized !== 'completed';
+        });
         if (firstPendingIdx === -1) return index === 0 ? 'done' : 'pending';
         if (index < firstPendingIdx) return 'done';
         if (index === firstPendingIdx) return 'running';
@@ -104,7 +139,7 @@ document.addEventListener('DOMContentLoaded', () => {
             pipelineMeta.textContent = '0 blocks · 0 branches';
             pipelineProgressLabel.textContent = '0/0';
             pipelineProgressFill.style.width = '0%';
-            pipelineTimeline.innerHTML = '<div class="empty-state">Le workflow en cours apparaîtra ici.</div>';
+            pipelineTimeline.innerHTML = '<div class="empty-state">The current workflow will appear here.</div>';
             return;
         }
 
@@ -139,8 +174,10 @@ document.addEventListener('DOMContentLoaded', () => {
         const blocksMarkup = nodes.map((node, index) => {
             const status = getBlockStatus(node, index, nodes);
             const isLast = index === nodes.length - 1;
-            const type = (node.type || 'default').toLowerCase();
-            const icon = typeIcons[type] || typeIcons.default;
+            const tone = getNodeTone(node);
+            const icon = getNodeIcon(node);
+            const typeLabel = getNodeTypeLabel(node);
+            const categoryLabel = escapeHtml(node.category || 'Workflow');
 
             // Determine line status (connects this dot to the next)
             let lineStatus = 'pending';
@@ -166,16 +203,19 @@ document.addEventListener('DOMContentLoaded', () => {
                     </div>
                     <div class="block-card ${status}">
                         <div class="block-card-top">
-                            <div class="block-card-icon ${type}">${icon}</div>
+                            <div class="block-card-icon ${tone}">${icon}</div>
                             <div class="block-card-header">
-                                <div class="block-card-title">
-                                    ${escapeHtml(node.title || 'Untitled block')}
+                                <div class="block-card-title-row">
+                                    <div class="block-card-title">${escapeHtml(node.title || 'Untitled block')}</div>
                                     <span class="block-card-status ${status}">
                                         <span class="block-card-status-dot ${status}"></span>
                                         ${statusLabel(status)}
                                     </span>
                                 </div>
-                                <div class="block-card-type ${type}">${escapeHtml(capitalize(type))}</div>
+                                <div class="block-card-meta">
+                                    <div class="block-card-type ${tone}">${typeLabel}</div>
+                                    <div class="block-card-category">${categoryLabel}</div>
+                                </div>
                             </div>
                         </div>
                         ${node.description ? `<div class="block-card-description">${escapeHtml(node.description)}</div>` : ''}
@@ -184,7 +224,7 @@ document.addEventListener('DOMContentLoaded', () => {
             `;
         }).join('');
 
-        pipelineTimeline.innerHTML = blocksMarkup || '<div class="empty-state">Le workflow en cours apparaîtra ici.</div>';
+        pipelineTimeline.innerHTML = blocksMarkup || '<div class="empty-state">The current workflow will appear here.</div>';
     }
 
     function capitalize(str) {
@@ -206,11 +246,19 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function setCloudStatus(label, tone) {
+        if (!cloudConsoleBadge) {
+            return;
+        }
+
         cloudConsoleBadge.textContent = label;
         cloudConsoleBadge.className = `cloud-console-badge ${tone}`;
     }
 
     function setCloudResult(text, mcpUrl = '') {
+        if (!cloudConsoleResult || !mcpUrlLink) {
+            return;
+        }
+
         cloudConsoleResult.textContent = text;
 
         if (mcpUrl) {
@@ -248,6 +296,29 @@ document.addEventListener('DOMContentLoaded', () => {
         chrome.tabs.create({ url: chrome.runtime.getURL('app-react/index.html#/workflows') });
     });
 
+    clearContextBtn?.addEventListener('click', () => {
+        chrome.runtime.sendMessage({ type: 'CLEAR_LIVE_CONTEXT' }, (response) => {
+            if (chrome.runtime.lastError) {
+                console.warn('Unable to clear sidepanel context:', chrome.runtime.lastError.message);
+                return;
+            }
+
+            if (!response?.ok) {
+                console.warn('Unable to clear sidepanel context:', response?.error || 'Unknown error');
+                return;
+            }
+
+            if (response.state) {
+                canvasState = normalizeState(response.state);
+                renderCanvasState();
+            }
+
+            if (response.status) {
+                applyStatus(response.status);
+            }
+        });
+    });
+
     settingsBtn?.addEventListener('click', () => {
         chrome.runtime.openOptionsPage();
     });
@@ -262,7 +333,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     runAgentBtn?.addEventListener('click', () => {
-        const userIntent = agentIntentInput.value.trim();
+        const userIntent = agentIntentInput?.value?.trim() || '';
         setCloudStatus('Running', 'running');
         setCloudResult('Calling the Cloud Run orchestrator and waiting for one action...');
 
@@ -322,11 +393,15 @@ document.addEventListener('DOMContentLoaded', () => {
     function applyStatus(status) {
         switch (status) {
             case 'listening':
-                pipelineStatusBadge.textContent = 'En écoute';
+                pipelineStatusBadge.textContent = 'Listening';
                 pipelineStatusBadge.className = 'pipeline-status-badge running';
                 break;
             case 'thinking':
-                pipelineStatusBadge.textContent = 'IA réfléchit...';
+                pipelineStatusBadge.textContent = 'Thinking';
+                pipelineStatusBadge.className = 'pipeline-status-badge running';
+                break;
+            case 'paused':
+                pipelineStatusBadge.textContent = 'Paused';
                 pipelineStatusBadge.className = 'pipeline-status-badge running';
                 break;
             case 'ready':
@@ -486,25 +561,41 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const waveBars = '<div class="wave-bar"></div>'.repeat(12);
 
+    function setPauseButtonState(paused) {
+        isPaused = paused;
+        if (!recorderPauseBtn) return;
+
+        recorderPauseBtn.classList.toggle('is-paused', paused);
+        recorderPauseBtn.innerHTML = paused
+            ? `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="7 5 19 12 7 19 7 5"></polygon></svg>`
+            : `<svg width="14" height="14" viewBox="0 0 24 24" fill="none"><rect x="6" y="4" width="4" height="16" rx="1.5" fill="#888"/><rect x="14" y="4" width="4" height="16" rx="1.5" fill="#888"/></svg>`;
+    }
+
     function applyRecordingUI(status) {
-        const isRecordingMode = (status === 'listening' || status === 'thinking');
+        const isRecordingMode = (status === 'listening' || status === 'thinking' || status === 'paused');
 
         if (isRecordingMode) {
             if (!isRecordingUi) {
                 isRecordingUi = true;
                 startTimer();
             }
-            recordingDot?.classList.add('pulse');
             if (recordingLabel) {
-                recordingLabel.textContent = status === 'thinking' ? 'Thinking…' : 'Recording';
+                recordingLabel.textContent = status === 'thinking'
+                    ? 'Thinking…'
+                    : status === 'paused'
+                        ? 'Paused'
+                        : 'Recording';
                 recordingLabel.classList.add('active');
             }
             recorderStopBtn?.classList.add('is-recording');
-            if (status === 'thinking') {
+            if (status === 'thinking' || status === 'paused' || isPaused) {
                 waveformVisualizer?.classList.remove('active');
+                recordingDot?.classList.remove('pulse');
             } else {
                 waveformVisualizer?.classList.add('active');
+                recordingDot?.classList.add('pulse');
             }
+            setPauseButtonState(status === 'paused' || isPaused);
         } else {
             isRecordingUi = false;
             clearInterval(timerInterval);
@@ -519,7 +610,23 @@ document.addEventListener('DOMContentLoaded', () => {
             recorderStopBtn?.classList.remove('is-recording');
             waveformVisualizer?.classList.remove('active');
             if (waveformVisualizer) waveformVisualizer.innerHTML = waveBars;
+            setPauseButtonState(false);
         }
+    }
+
+    function syncRecorderState() {
+        chrome.runtime.sendMessage({ type: 'GET_AUDIO_STATE' }, (response) => {
+            if (chrome.runtime.lastError || !response) {
+                return;
+            }
+
+            setPauseButtonState(Boolean(response.isPaused));
+            if (response.isRecording) {
+                applyRecordingUI(response.isPaused ? 'paused' : 'listening');
+            } else {
+                applyRecordingUI('ready');
+            }
+        });
     }
 
     // Expose this so applyStatus can call it if needed, or simply assign it
@@ -528,16 +635,14 @@ document.addEventListener('DOMContentLoaded', () => {
     if(recorderPauseBtn) {
         recorderPauseBtn.addEventListener('click', () => {
             if (!isRecordingUi) return;
-            isPaused = !isPaused;
-            if (isPaused) {
-                waveformVisualizer?.classList.remove('active');
-                recordingDot?.classList.remove('pulse');
-                recorderPauseBtn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#888" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>`;
-            } else {
-                waveformVisualizer?.classList.add('active');
-                recordingDot?.classList.add('pulse');
-                recorderPauseBtn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none"><rect x="6" y="4" width="4" height="16" rx="1.5" fill="#888"/><rect x="14" y="4" width="4" height="16" rx="1.5" fill="#888"/></svg>`;
-            }
+            chrome.runtime.sendMessage({ type: 'TOGGLE_INPUT_PAUSE' }, (response) => {
+                if (chrome.runtime.lastError || !response) {
+                    return;
+                }
+
+                setPauseButtonState(Boolean(response.isPaused));
+                applyRecordingUI(response.isPaused ? 'paused' : 'listening');
+            });
         });
     }
 
@@ -546,4 +651,14 @@ document.addEventListener('DOMContentLoaded', () => {
             chrome.runtime.sendMessage({ type: 'TOGGLE_AUDIO' });
         });
     }
+
+    chrome.runtime.onMessage.addListener((message) => {
+        if (message.target !== 'sidepanel') return;
+
+        if (message.type === 'INPUT_PAUSE_UPDATE') {
+            setPauseButtonState(Boolean(message.isPaused));
+        }
+    });
+
+    syncRecorderState();
 });

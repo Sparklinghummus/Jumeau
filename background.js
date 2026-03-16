@@ -5,15 +5,18 @@ import { exportWeatherMcp } from "./mcp-export/extension-client.js";
 console.log("Jumeau Service Worker initialisé - Mode Live API");
 
 let isRecording = false;
+let isInputPaused = false;
 let geminiWs = null;
 let screenshotInterval = null;
 let geminiSessionReady = false;
 let isGeminiSpeaking = false;
+let currentVoiceActivityLevel = 0;
 const GEMINI_LIVE_MODEL = "models/gemini-2.5-flash-native-audio-preview-12-2025";
 const GEMINI_LIVE_ENDPOINT =
   "wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1beta.GenerativeService.BidiGenerateContent";
 const GEMINI_CONNECT_TIMEOUT_MS = 10000;
 const LIVE_CANVAS_STORAGE_KEY = "liveCanvasState";
+const LIVE_CANVAS_SCHEMA_VERSION = 2;
 const MAX_ACTIONS = 60;
 const MAX_TRANSCRIPTIONS = 80;
 const MAX_QUESTIONS = 12;
@@ -89,6 +92,7 @@ chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: true }).catch((error
 
 function createEmptyLiveCanvasState() {
   return {
+    version: LIVE_CANVAS_SCHEMA_VERSION,
     currentWorkflowId: null,
     workflows: [],
     questions: [],
@@ -139,13 +143,36 @@ async function ensureLiveCanvasStateReady() {
 }
 
 function normalizeLiveCanvasState(rawState = {}) {
-  return {
-    currentWorkflowId: rawState.currentWorkflowId || null,
-    workflows: Array.isArray(rawState.workflows) ? rawState.workflows : [],
-    questions: Array.isArray(rawState.questions) ? rawState.questions : [],
-    actions: Array.isArray(rawState.actions) ? rawState.actions : [],
-    transcriptions: Array.isArray(rawState.transcriptions) ? rawState.transcriptions : [],
-  };
+  const state = createEmptyLiveCanvasState();
+  const rawWorkflows = Array.isArray(rawState.workflows) ? rawState.workflows : [];
+  const workflowIds = new Set();
+
+  state.workflows = rawWorkflows
+    .map((workflow) => normalizeWorkflowRecord(workflow))
+    .filter((workflow) => {
+      if (workflowIds.has(workflow.id)) {
+        return false;
+      }
+      workflowIds.add(workflow.id);
+      return true;
+    });
+
+  state.questions = (Array.isArray(rawState.questions) ? rawState.questions : []).map((question) =>
+    normalizeWorkflowQuestion(question),
+  );
+  state.actions = (Array.isArray(rawState.actions) ? rawState.actions : []).map((action) =>
+    createCanvasAction(action),
+  );
+  state.transcriptions = (Array.isArray(rawState.transcriptions) ? rawState.transcriptions : []).map((entry) =>
+    createCanvasTranscription(entry),
+  );
+  state.currentWorkflowId =
+    cleanText(rawState.currentWorkflowId) && workflowIds.has(rawState.currentWorkflowId)
+      ? rawState.currentWorkflowId
+      : state.workflows[0]?.id || null;
+
+  trimLiveCanvasState(state);
+  return state;
 }
 
 function cloneLiveCanvasState() {
@@ -167,10 +194,203 @@ function cleanStringArray(value) {
   return value
     .map((item) => cleanText(item))
     .filter(Boolean)
-    .slice(0, 4);
+    .slice(0, 8);
+}
+
+function cleanObject(value) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return {};
+  }
+
+  return { ...value };
+}
+
+function parseJsonValue(value) {
+  if (typeof value !== "string") {
+    return null;
+  }
+
+  try {
+    return JSON.parse(value);
+  } catch (_) {
+    return null;
+  }
+}
+
+function normalizeWorkflowStatus(value) {
+  const status = cleanText(value, "draft").toLowerCase();
+  if (status === "published" || status === "archived") {
+    return status;
+  }
+  return "draft";
+}
+
+function normalizeWorkflowNodeStatus(value) {
+  const status = cleanText(value, "pending").toLowerCase();
+  if (status === "done") return "completed";
+  if (status === "thinking") return "running";
+  if (status === "ready" || status === "draft") return "pending";
+  if (status === "completed" || status === "running") return status;
+  return "pending";
+}
+
+function defaultBranchLabel(index) {
+  if (index === 0) return "True";
+  if (index === 1) return "False";
+  return `Path ${index + 1}`;
+}
+
+function normalizeWorkflowNodeType(value, rawNode = {}) {
+  const type = cleanText(value).toLowerCase();
+  const childCount = Array.isArray(rawNode.children) ? rawNode.children.filter(Boolean).length : 0;
+  const branchLabelCount = Array.isArray(rawNode.branchLabels) ? rawNode.branchLabels.filter(Boolean).length : 0;
+
+  if (type === "trigger" || type === "condition" || type === "action" || type === "branch") {
+    return type === "condition" && (childCount > 1 || branchLabelCount > 1) ? "branch" : type;
+  }
+
+  if (type === "decision") {
+    return childCount > 1 || branchLabelCount > 1 ? "branch" : "condition";
+  }
+
+  if (type === "observe" || type === "step" || type === "output" || type === "question" || type === "integration") {
+    return "action";
+  }
+
+  return childCount > 1 || branchLabelCount > 1 ? "branch" : "action";
+}
+
+function normalizeWorkflowNodeCategory(value, type, params = {}) {
+  const category = cleanText(value);
+  if (category) {
+    return category;
+  }
+
+  if (type === "trigger") {
+    return "Voice";
+  }
+
+  if (type === "condition" || type === "branch") {
+    return "Condition";
+  }
+
+  if (cleanText(params.integration)) {
+    return "Integrations";
+  }
+
+  const operation = cleanText(params.operation).toLowerCase();
+  if (operation.includes("classif") || operation.includes("enrich")) return "AI";
+  if (operation.includes("list")) return "Lists";
+  if (operation.includes("record") || operation.includes("tracker")) return "Records";
+
+  return "Actions";
+}
+
+function normalizeNodeParams(value, rawNode = {}) {
+  const parsed = typeof value === "string" ? parseJsonValue(value) : value;
+  const params = cleanObject(parsed);
+
+  if (cleanText(rawNode.rationale) && !params.rationale) {
+    params.rationale = cleanText(rawNode.rationale);
+  }
+
+  return params;
+}
+
+function normalizeWorkflowNodeRecord(rawNode = {}) {
+  const type = normalizeWorkflowNodeType(rawNode.type || rawNode.nodeType, rawNode);
+  const params = normalizeNodeParams(rawNode.params, rawNode);
+
+  return {
+    id: cleanText(rawNode.id, createEntityId("node")),
+    type,
+    title: cleanText(rawNode.title || rawNode.label, "Untitled node"),
+    category: normalizeWorkflowNodeCategory(rawNode.category, type, params),
+    description: cleanText(rawNode.description || rawNode.details, "Workflow step"),
+    status: normalizeWorkflowNodeStatus(rawNode.status),
+    children: cleanStringArray(rawNode.children),
+    branchLabels: cleanStringArray(rawNode.branchLabels),
+    params,
+    createdAt: typeof rawNode.createdAt === "number" ? rawNode.createdAt : Date.now(),
+    updatedAt: typeof rawNode.updatedAt === "number" ? rawNode.updatedAt : Date.now(),
+  };
+}
+
+function deriveEntryNodeId(nodes = []) {
+  const triggerNode = nodes.find((node) => node.type === "trigger");
+  if (triggerNode) {
+    return triggerNode.id;
+  }
+
+  const childIds = new Set(nodes.flatMap((node) => (Array.isArray(node.children) ? node.children : [])));
+  const rootNode = nodes.find((node) => !childIds.has(node.id));
+  return rootNode?.id || nodes[0]?.id || null;
+}
+
+function normalizeWorkflowRecord(rawWorkflow = {}) {
+  const rawNodes = Array.isArray(rawWorkflow.nodes) ? rawWorkflow.nodes : [];
+  const seenNodeIds = new Set();
+  const nodes = rawNodes
+    .map((node) => normalizeWorkflowNodeRecord(node))
+    .filter((node) => {
+      if (seenNodeIds.has(node.id)) {
+        return false;
+      }
+      seenNodeIds.add(node.id);
+      return true;
+    });
+
+  const nodeIds = new Set(nodes.map((node) => node.id));
+  const normalizedNodes = nodes.map((node) => {
+    const maxChildren = node.type === "branch" ? 8 : 1;
+    const children = cleanStringArray(node.children)
+      .filter((childId) => childId !== node.id && nodeIds.has(childId))
+      .slice(0, maxChildren);
+    const nextNode = {
+      ...node,
+      children,
+    };
+
+    if (node.type === "branch") {
+      const branchLabels = cleanStringArray(node.branchLabels);
+      nextNode.branchLabels = children.map((_, index) => branchLabels[index] || defaultBranchLabel(index));
+    } else {
+      delete nextNode.branchLabels;
+    }
+
+    return nextNode;
+  });
+
+  const explicitEntryNodeId = cleanText(rawWorkflow.entryNodeId);
+
+  return {
+    id: cleanText(rawWorkflow.id, createEntityId("workflow")),
+    title: cleanText(rawWorkflow.title || rawWorkflow.name, "Untitled workflow"),
+    goal: cleanText(rawWorkflow.goal || rawWorkflow.objective, "Workflow detected during observation"),
+    trigger: cleanText(rawWorkflow.trigger, ""),
+    summary: cleanText(rawWorkflow.summary || rawWorkflow.description, ""),
+    domain: cleanText(rawWorkflow.domain, ""),
+    status: normalizeWorkflowStatus(rawWorkflow.status),
+    entryNodeId: nodeIds.has(explicitEntryNodeId) ? explicitEntryNodeId : deriveEntryNodeId(normalizedNodes),
+    createdAt: typeof rawWorkflow.createdAt === "number" ? rawWorkflow.createdAt : Date.now(),
+    updatedAt: typeof rawWorkflow.updatedAt === "number" ? rawWorkflow.updatedAt : Date.now(),
+    nodes: normalizedNodes,
+  };
+}
+
+function normalizeWorkflowQuestion(rawQuestion = {}) {
+  return {
+    id: cleanText(rawQuestion.id, createEntityId("question")),
+    workflowId: cleanText(rawQuestion.workflowId) || null,
+    text: cleanText(rawQuestion.text || rawQuestion.question, "What is the next step of this workflow?"),
+    context: cleanText(rawQuestion.context, ""),
+    suggestedAnswers: cleanStringArray(rawQuestion.suggestedAnswers || rawQuestion.options),
+    createdAt: typeof rawQuestion.createdAt === "number" ? rawQuestion.createdAt : Date.now(),
+  };
 }
 
 function trimLiveCanvasState(state) {
+  state.version = LIVE_CANVAS_SCHEMA_VERSION;
   state.actions = state.actions.slice(-MAX_ACTIONS);
   state.transcriptions = state.transcriptions.slice(-MAX_TRANSCRIPTIONS);
   state.questions = state.questions.slice(-MAX_QUESTIONS);
@@ -178,6 +398,9 @@ function trimLiveCanvasState(state) {
     ...workflow,
     nodes: Array.isArray(workflow.nodes) ? workflow.nodes.slice(-MAX_WORKFLOW_NODES) : [],
   }));
+  if (!state.workflows.some((workflow) => workflow.id === state.currentWorkflowId)) {
+    state.currentWorkflowId = state.workflows[0]?.id || null;
+  }
 }
 
 async function syncLiveCanvasState() {
@@ -194,7 +417,7 @@ async function syncLiveCanvasState() {
 async function mutateLiveCanvasState(mutator) {
   await ensureLiveCanvasStateReady();
   const result = mutator(liveCanvasState);
-  trimLiveCanvasState(liveCanvasState);
+  liveCanvasState = normalizeLiveCanvasState(liveCanvasState);
   await syncLiveCanvasState();
   return result;
 }
@@ -240,6 +463,11 @@ async function addCanvasTranscription(entry) {
 function findWorkflow(state, args = {}) {
   const workflowId = cleanText(args.workflowId);
   const workflowTitle = cleanText(args.workflowTitle || args.title || args.name).toLowerCase();
+  const currentWorkflowId = cleanText(state.currentWorkflowId);
+
+  if (!workflowId && !workflowTitle && currentWorkflowId) {
+    return state.workflows.find((workflow) => workflow.id === currentWorkflowId) || null;
+  }
 
   return (
     state.workflows.find((workflow) => {
@@ -252,7 +480,44 @@ function findWorkflow(state, args = {}) {
   );
 }
 
-async function createWorkflowFromTool(args = {}) {
+function ensureWorkflowRecord(state, args = {}) {
+  let workflow = findWorkflow(state, args);
+
+  if (workflow) {
+    return workflow;
+  }
+
+  const title = cleanText(args.workflowTitle || args.title || args.name, "Current workflow");
+  workflow = normalizeWorkflowRecord({
+    id: cleanText(args.workflowId, createEntityId("workflow")),
+    title,
+    goal: cleanText(args.workflowGoal || args.goal, "Structure the observed process"),
+    trigger: cleanText(args.trigger, "Triggered from sidepanel"),
+    summary: cleanText(args.summary, "Workflow created to receive new nodes"),
+    domain: cleanText(args.domain, ""),
+    status: cleanText(args.workflowStatus || args.status, "draft"),
+    nodes: [],
+  });
+  state.workflows.push(workflow);
+  return workflow;
+}
+
+function findWorkflowNode(workflow, args = {}) {
+  const nodeId = cleanText(args.nodeId);
+  const nodeTitle = cleanText(args.nodeTitle || args.title || args.label).toLowerCase();
+
+  return (
+    (workflow.nodes || []).find((node) => {
+      if (nodeId && node.id === nodeId) {
+        return true;
+      }
+
+      return nodeTitle && node.title.toLowerCase() === nodeTitle;
+    }) || null
+  );
+}
+
+async function upsertWorkflowFromTool(args = {}) {
   return mutateLiveCanvasState((state) => {
     const title = cleanText(args.title || args.name, "Nouveau workflow");
     const goal = cleanText(args.goal || args.objective, "Workflow détecté pendant l’observation");
@@ -264,18 +529,18 @@ async function createWorkflowFromTool(args = {}) {
     let created = false;
 
     if (!workflow) {
-      workflow = {
+      workflow = normalizeWorkflowRecord({
         id: createEntityId("workflow"),
         title,
         goal,
         trigger,
         summary,
         domain,
-        status: "draft",
+        status: cleanText(args.status, "draft"),
         createdAt: Date.now(),
         updatedAt: Date.now(),
         nodes: [],
-      };
+      });
       state.workflows.push(workflow);
       created = true;
     } else {
@@ -283,6 +548,7 @@ async function createWorkflowFromTool(args = {}) {
       workflow.trigger = trigger || workflow.trigger;
       workflow.summary = summary || workflow.summary;
       workflow.domain = domain || workflow.domain;
+      workflow.status = normalizeWorkflowStatus(args.status || workflow.status);
       workflow.updatedAt = Date.now();
     }
 
@@ -301,47 +567,45 @@ async function createWorkflowFromTool(args = {}) {
 
 async function addWorkflowNodeFromTool(args = {}) {
   return mutateLiveCanvasState((state) => {
-    let workflow = findWorkflow(state, args);
+    const workflow = ensureWorkflowRecord(state, args);
+    const existingNode = findWorkflowNode(workflow, args);
+    const node = normalizeWorkflowNodeRecord({
+      ...existingNode,
+      id: cleanText(args.nodeId, existingNode?.id || createEntityId("node")),
+      type: args.nodeType || args.type || existingNode?.type,
+      title: args.title || args.label || existingNode?.title,
+      category: args.category || existingNode?.category,
+      description: args.description || args.details || existingNode?.description,
+      status: args.status || existingNode?.status,
+      children: args.children || existingNode?.children,
+      branchLabels: args.branchLabels || existingNode?.branchLabels,
+      params: args.params ?? existingNode?.params,
+      rationale: args.rationale || existingNode?.params?.rationale,
+      createdAt: existingNode?.createdAt || Date.now(),
+      updatedAt: Date.now(),
+    });
 
-    if (!workflow) {
-      const fallbackTitle = cleanText(args.workflowTitle, "Workflow en cours");
-      workflow = {
-        id: createEntityId("workflow"),
-        title: fallbackTitle,
-        goal: cleanText(args.workflowGoal, "Structurer le process observé"),
-        trigger: "Déclenché depuis le sidekick",
-        summary: "Workflow auto-créé pour accueillir les nouveaux noeuds",
-        domain: cleanText(args.domain, ""),
-        status: "draft",
-        createdAt: Date.now(),
-        updatedAt: Date.now(),
-        nodes: [],
-      };
-      state.workflows.push(workflow);
+    if (existingNode) {
+      workflow.nodes = workflow.nodes.map((currentNode) => (currentNode.id === node.id ? node : currentNode));
+    } else {
+      workflow.nodes.push(node);
     }
 
-    const node = {
-      id: createEntityId("node"),
-      type: cleanText(args.nodeType || args.type, "step"),
-      title: cleanText(args.title || args.label, "Nouveau noeud"),
-      description: cleanText(args.description || args.details, "Etape ajoutée par Jumeau"),
-      status: cleanText(args.status, "draft"),
-      rationale: cleanText(args.rationale, ""),
-      createdAt: Date.now(),
-    };
+    if (!workflow.entryNodeId || node.type === "trigger") {
+      workflow.entryNodeId = workflow.entryNodeId || node.id;
+    }
 
-    workflow.nodes.push(node);
     workflow.updatedAt = Date.now();
     state.currentWorkflowId = workflow.id;
     state.actions.push(
       createCanvasAction({
-        title: `Noeud ajouté : ${node.title}`,
+        title: `${existingNode ? "Noeud mis à jour" : "Noeud ajouté"} : ${node.title}`,
         description: `${workflow.title} · ${node.description}`,
         icon: "plus",
       }),
     );
 
-    return { workflow, node };
+    return { workflow, node, created: !existingNode };
   });
 }
 
@@ -367,6 +631,124 @@ async function addWorkflowQuestionFromTool(args = {}) {
     );
 
     return question;
+  });
+}
+
+async function linkWorkflowNodesFromTool(args = {}) {
+  return mutateLiveCanvasState((state) => {
+    const workflow = ensureWorkflowRecord(state, args);
+    const fromNodeId = cleanText(args.from || args.fromNodeId);
+    const toNodeId = cleanText(args.to || args.toNodeId);
+
+    if (!fromNodeId || !toNodeId) {
+      throw new Error("Both from and to node ids are required");
+    }
+
+    const fromNode = (workflow.nodes || []).find((node) => node.id === fromNodeId);
+    const toNode = (workflow.nodes || []).find((node) => node.id === toNodeId);
+
+    if (!fromNode || !toNode) {
+      throw new Error("Both linked nodes must exist in the workflow");
+    }
+
+    const nextChildren = Array.from(new Set([...(Array.isArray(fromNode.children) ? fromNode.children : []), toNodeId]));
+    fromNode.children = fromNode.type === "branch" ? nextChildren.slice(0, 8) : nextChildren.slice(0, 1);
+    fromNode.updatedAt = Date.now();
+    workflow.updatedAt = Date.now();
+    if (!workflow.entryNodeId && fromNode.type === "trigger") {
+      workflow.entryNodeId = fromNode.id;
+    }
+    state.currentWorkflowId = workflow.id;
+    state.actions.push(
+      createCanvasAction({
+        title: "Lien de workflow ajouté",
+        description: `${fromNode.title} -> ${toNode.title}`,
+        icon: "git-branch",
+      }),
+    );
+
+    return { workflow, fromNode, toNode };
+  });
+}
+
+async function setWorkflowBranchFromTool(args = {}) {
+  return mutateLiveCanvasState((state) => {
+    const workflow = ensureWorkflowRecord(state, args);
+    const branchNode = findWorkflowNode(workflow, args);
+
+    if (!branchNode) {
+      throw new Error("Branch node not found");
+    }
+
+    const rawBranches = Array.isArray(args.branches) ? args.branches : parseJsonValue(args.branches);
+    if (!Array.isArray(rawBranches) || rawBranches.length < 2) {
+      throw new Error("At least two branch definitions are required");
+    }
+
+    const branches = rawBranches
+      .map((branch, index) => ({
+        label: cleanText(branch?.label, defaultBranchLabel(index)),
+        to: cleanText(branch?.to || branch?.toNodeId || branch?.nodeId),
+      }))
+      .filter((branch) => branch.to);
+
+    if (branches.length < 2) {
+      throw new Error("At least two valid branch targets are required");
+    }
+
+    const nodeIds = new Set((workflow.nodes || []).map((node) => node.id));
+    const validBranches = branches.filter((branch) => nodeIds.has(branch.to));
+    if (validBranches.length < 2) {
+      throw new Error("Branch targets must reference existing nodes");
+    }
+
+    branchNode.type = "branch";
+    branchNode.category = "Condition";
+    branchNode.children = validBranches.map((branch) => branch.to);
+    branchNode.branchLabels = validBranches.map((branch) => branch.label);
+    branchNode.params = {
+      ...cleanObject(branchNode.params),
+      ...normalizeNodeParams(args.params),
+      mode: cleanText(args.mode, cleanText(branchNode.params?.mode, "label_match")),
+      field: cleanText(args.field, cleanText(branchNode.params?.field, "")),
+    };
+    branchNode.updatedAt = Date.now();
+    workflow.updatedAt = Date.now();
+    state.currentWorkflowId = workflow.id;
+    state.actions.push(
+      createCanvasAction({
+        title: `Branches mises à jour : ${branchNode.title}`,
+        description: validBranches.map((branch) => branch.label).join(" · "),
+        icon: "git-branch",
+      }),
+    );
+
+    return { workflow, node: branchNode };
+  });
+}
+
+async function setWorkflowEntryFromTool(args = {}) {
+  return mutateLiveCanvasState((state) => {
+    const workflow = ensureWorkflowRecord(state, args);
+    const nodeId = cleanText(args.nodeId || args.entryNodeId);
+    const node = (workflow.nodes || []).find((currentNode) => currentNode.id === nodeId);
+
+    if (!node) {
+      throw new Error("Entry node not found");
+    }
+
+    workflow.entryNodeId = node.id;
+    workflow.updatedAt = Date.now();
+    state.currentWorkflowId = workflow.id;
+    state.actions.push(
+      createCanvasAction({
+        title: `Entrée du workflow définie`,
+        description: `${workflow.title} démarre sur ${node.title}`,
+        icon: "play",
+      }),
+    );
+
+    return { workflow, node };
   });
 }
 
@@ -440,6 +822,28 @@ function sendSidepanelStatus(status) {
       status,
     })
     .catch(() => {});
+}
+
+function sendSidepanelPauseState() {
+  chrome.runtime
+    .sendMessage({
+      target: "sidepanel",
+      type: "INPUT_PAUSE_UPDATE",
+      isPaused: isInputPaused,
+    })
+    .catch(() => {});
+}
+
+function getCurrentSessionStatus() {
+  if (!isRecording) {
+    return "ready";
+  }
+
+  if (isGeminiSpeaking) {
+    return "thinking";
+  }
+
+  return isInputPaused ? "paused" : "listening";
 }
 
 function sendGeminiToolResponse(mode, functionCall, response) {
@@ -545,8 +949,8 @@ async function handleGeminiFunctionCall(functionCall, mode) {
     return;
   }
 
-  if (functionCall.name === "create_workflow") {
-    const result = await createWorkflowFromTool(args);
+  if (functionCall.name === "create_workflow" || functionCall.name === "workflow_upsert") {
+    const result = await upsertWorkflowFromTool(args);
     sendGeminiToolResponse(mode, functionCall, {
       ok: true,
       mocked: true,
@@ -557,7 +961,7 @@ async function handleGeminiFunctionCall(functionCall, mode) {
     return;
   }
 
-  if (functionCall.name === "add_workflow_node") {
+  if (functionCall.name === "add_workflow_node" || functionCall.name === "workflow_add_node") {
     const result = await addWorkflowNodeFromTool(args);
     sendGeminiToolResponse(mode, functionCall, {
       ok: true,
@@ -569,7 +973,44 @@ async function handleGeminiFunctionCall(functionCall, mode) {
     return;
   }
 
-  if (functionCall.name === "ask_workflow_question") {
+  if (functionCall.name === "workflow_link_nodes") {
+    const result = await linkWorkflowNodesFromTool(args);
+    sendGeminiToolResponse(mode, functionCall, {
+      ok: true,
+      mocked: true,
+      workflowId: result.workflow.id,
+      fromNodeId: result.fromNode.id,
+      toNodeId: result.toNode.id,
+      result: "Workflow nodes linked in sidepanel",
+    });
+    return;
+  }
+
+  if (functionCall.name === "workflow_set_branch") {
+    const result = await setWorkflowBranchFromTool(args);
+    sendGeminiToolResponse(mode, functionCall, {
+      ok: true,
+      mocked: true,
+      workflowId: result.workflow.id,
+      nodeId: result.node.id,
+      result: "Workflow branch configured in sidepanel",
+    });
+    return;
+  }
+
+  if (functionCall.name === "workflow_set_entry") {
+    const result = await setWorkflowEntryFromTool(args);
+    sendGeminiToolResponse(mode, functionCall, {
+      ok: true,
+      mocked: true,
+      workflowId: result.workflow.id,
+      nodeId: result.node.id,
+      result: "Workflow entry set in sidepanel",
+    });
+    return;
+  }
+
+  if (functionCall.name === "ask_workflow_question" || functionCall.name === "workflow_ask_question") {
     const question = await addWorkflowQuestionFromTool(args);
     sendGeminiToolResponse(mode, functionCall, {
       ok: true,
@@ -720,8 +1161,6 @@ async function connectToGeminiLive() {
           if (tabs[0]?.id) chrome.sidePanel.open({ tabId: tabs[0].id }).catch(() => {});
         });
         chrome.runtime.sendMessage({ target: "sidepanel", type: "SHOW_SETUP" }).catch(() => {});
-        settleWithError(new Error("Clé API Gemini introuvable"));
-        chrome.runtime.openOptionsPage();
         settleWithError(new Error("Configure either Orchestrator URL or Gemini API key in the extension options."));
         return;
       }
@@ -783,9 +1222,12 @@ OBJECTIF :
 - Construire un workflow en direct dans le sidepanel via les tools.
 
 COMPORTEMENT ATTENDU :
-- Si tu détectes un process ou une automatisation potentielle, annonce-le naturellement puis crée un workflow via create_workflow.
-- Dès qu'une étape utile apparaît, ajoute un noeud via add_workflow_node.
-- Quand une zone reste ambiguë, utilise ask_workflow_question et pose aussi la question à voix haute.
+- Si tu détectes un process ou une automatisation potentielle, annonce-le naturellement puis crée ou mets à jour un workflow via workflow_upsert.
+- Dès qu'une étape utile apparaît, ajoute ou mets à jour un noeud via workflow_add_node.
+- Relie explicitement les noeuds entre eux via workflow_link_nodes.
+- Si un noeud route vers plusieurs issues, configure-le via workflow_set_branch.
+- Définis explicitement le point d'entrée via workflow_set_entry dès qu'il est connu.
+- Quand une zone reste ambiguë, utilise workflow_ask_question et pose aussi la question à voix haute.
 - Les tools ne lancent aucune vraie automatisation : ils servent uniquement à construire un aperçu mocké visible dans le sidepanel.
 - Tu peux dire des phrases comme : "c'est intéressant, je crée un nouveau workflow", "j'ajoute un noeud pour cette étape", "il me manque une règle ici".
 - Tu comprends toutes les langues de l'utilisateur, y compris le français, mais tu réponds toujours en anglais naturel et fluide.
@@ -829,50 +1271,109 @@ RÈGLES CRITIQUES :
                     },
                   },
                   {
-                    name: "create_workflow",
+                    name: "workflow_upsert",
                     description:
-                      "Create or update a workflow blueprint in the sidepanel. This is a mocked UI action only.",
+                      "Create or update a workflow container in the sidepanel using the canonical workflow protocol.",
                     parameters: {
                       type: "OBJECT",
                       properties: {
                         workflowId: { type: "STRING" },
-                        title: { type: "STRING", description: "Workflow title visible in the sidepanel." },
+                        title: { type: "STRING", description: "Workflow title visible in the workflow editor." },
                         goal: { type: "STRING", description: "What the workflow tries to achieve." },
-                        trigger: { type: "STRING", description: "What event or user action starts the workflow." },
+                        trigger: { type: "STRING", description: "What event or action starts the workflow." },
                         summary: { type: "STRING", description: "Short summary of the workflow." },
                         domain: { type: "STRING", description: "Optional domain or app context." },
+                        status: { type: "STRING", description: "draft, published, archived." },
                       },
                       required: ["title", "goal"],
                     },
                   },
                   {
-                    name: "add_workflow_node",
+                    name: "workflow_add_node",
                     description:
-                      "Add a node to the current workflow in the sidepanel. This is a mocked UI action only.",
+                      "Create or update a workflow node. Use only the canonical node types: trigger, condition, action, branch.",
                     parameters: {
                       type: "OBJECT",
                       properties: {
                         workflowId: { type: "STRING" },
-                        workflowTitle: {
-                          type: "STRING",
-                          description: "Fallback workflow title if no workflowId is known.",
-                        },
-                        title: { type: "STRING", description: "Node title." },
+                        workflowTitle: { type: "STRING" },
+                        nodeId: { type: "STRING" },
+                        title: { type: "STRING", description: "Node title visible in the editor." },
                         description: { type: "STRING", description: "What this node represents." },
+                        category: { type: "STRING", description: "Semantic category such as Voice, Condition, AI, Records, Lists, Integrations." },
                         nodeType: {
                           type: "STRING",
-                          description: "One of observe, trigger, step, decision, output, question.",
+                          description: "One of trigger, condition, action, branch.",
                         },
-                        status: { type: "STRING", description: "draft, thinking, ready." },
-                        rationale: { type: "STRING", description: "Why this node was added." },
+                        status: { type: "STRING", description: "pending, running, completed." },
+                        params: {
+                          type: "OBJECT",
+                          description: "Type-specific semantic parameters. Never send visual fields here.",
+                        },
                       },
-                      required: ["title", "description"],
+                      required: ["title", "description", "category", "nodeType"],
                     },
                   },
                   {
-                    name: "ask_workflow_question",
+                    name: "workflow_link_nodes",
+                    description: "Create a directed edge between two existing nodes in the same workflow.",
+                    parameters: {
+                      type: "OBJECT",
+                      properties: {
+                        workflowId: { type: "STRING" },
+                        workflowTitle: { type: "STRING" },
+                        from: { type: "STRING", description: "Source node id." },
+                        to: { type: "STRING", description: "Target node id." },
+                      },
+                      required: ["workflowId", "from", "to"],
+                    },
+                  },
+                  {
+                    name: "workflow_set_branch",
                     description:
-                      "Add a clarifying question to the sidepanel so the user can refine the workflow. This is a mocked UI action only.",
+                      "Configure a branch node with labeled outgoing paths. Use this only for branch nodes with two or more outcomes.",
+                    parameters: {
+                      type: "OBJECT",
+                      properties: {
+                        workflowId: { type: "STRING" },
+                        workflowTitle: { type: "STRING" },
+                        nodeId: { type: "STRING", description: "Branch node id." },
+                        branches: {
+                          type: "ARRAY",
+                          description: "Branch definitions with a visible label and an existing target node id.",
+                          items: {
+                            type: "OBJECT",
+                            properties: {
+                              label: { type: "STRING" },
+                              to: { type: "STRING" },
+                            },
+                            required: ["label", "to"],
+                          },
+                        },
+                        mode: { type: "STRING", description: "Optional branching mode like label_match or boolean_split." },
+                        field: { type: "STRING", description: "Optional source field used by the branch condition." },
+                        params: { type: "OBJECT", description: "Optional semantic configuration." },
+                      },
+                      required: ["workflowId", "nodeId", "branches"],
+                    },
+                  },
+                  {
+                    name: "workflow_set_entry",
+                    description: "Set the entry node for the workflow.",
+                    parameters: {
+                      type: "OBJECT",
+                      properties: {
+                        workflowId: { type: "STRING" },
+                        workflowTitle: { type: "STRING" },
+                        nodeId: { type: "STRING", description: "Entry node id." },
+                      },
+                      required: ["workflowId", "nodeId"],
+                    },
+                  },
+                  {
+                    name: "workflow_ask_question",
+                    description:
+                      "Store a clarifying workflow question outside the graph when a business rule is missing or ambiguous.",
                     parameters: {
                       type: "OBJECT",
                       properties: {
@@ -1058,14 +1559,14 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     }
     return true; // Asynchrone
   } else if (message.type === "GET_AUDIO_STATE") {
-    sendResponse({ isRecording: isRecording });
+    sendResponse({ isRecording: isRecording, isPaused: isInputPaused });
     return false;
   } else if (message.type === "GET_LIVE_CANVAS_STATE") {
     ensureLiveCanvasStateReady()
       .then(() => {
         sendResponse({
           state: cloneLiveCanvasState(),
-          status: isRecording ? "listening" : "ready",
+          status: getCurrentSessionStatus(),
         });
       })
       .catch((error) => {
@@ -1180,9 +1681,24 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         sendResponse({ error: e.message });
       });
     return true; // Asynchrone
+  } else if (message.type === "TOGGLE_INPUT_PAUSE") {
+    if (!isRecording) {
+      sendResponse({ isRecording: false, isPaused: isInputPaused });
+      return false;
+    }
+
+    isInputPaused = !isInputPaused;
+    if (isInputPaused) {
+      currentVoiceActivityLevel = 0;
+      broadcastVoiceActivity(0);
+    }
+    sendSidepanelPauseState();
+    sendSidepanelStatus(getCurrentSessionStatus());
+    sendResponse({ isRecording: true, isPaused: isInputPaused });
+    return false;
   } else if (message.type === "AUDIO_CHUNK") {
     // Les données PCM brutes arrivent ici depuis l'offscreen
-    if (isGeminiSpeaking) {
+    if (isGeminiSpeaking || isInputPaused) {
       return false;
     }
     if (geminiWs && geminiSessionReady && geminiWs.readyState === WebSocket.OPEN) {
@@ -1201,12 +1717,21 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     console.log("Capture micro démarrée :", message.details);
   } else if (message.type === "PLAYBACK_STARTED") {
     isGeminiSpeaking = true;
+    currentVoiceActivityLevel = 0;
+    broadcastVoiceActivity(0);
+    sendSidepanelPauseState();
     console.log("Lecture audio Gemini démarrée, pause temporaire des inputs live.");
   } else if (message.type === "PLAYBACK_ENDED") {
     isGeminiSpeaking = false;
     console.log("Lecture audio Gemini terminée, reprise des inputs live.");
     if (isRecording) {
-      sendSidepanelStatus("listening");
+      sendSidepanelPauseState();
+      sendSidepanelStatus(getCurrentSessionStatus());
+    }
+  } else if (message.type === "MIC_ACTIVITY") {
+    currentVoiceActivityLevel = Math.max(0, Math.min(1, Number(message.level) || 0));
+    if (isRecording) {
+      broadcastVoiceActivity(currentVoiceActivityLevel);
     }
   } else if (message.type === "RECORDING_ERROR") {
     const error = deserializeError(message.error);
@@ -1218,9 +1743,12 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
 async function startAudioCapture() {
   await setupOffscreenDocument("offscreen/offscreen.html");
+  isInputPaused = false;
 
   // Activate halo immediately so the user sees feedback right away
   broadcastPillState(true);
+  currentVoiceActivityLevel = 0;
+  broadcastVoiceActivity(0);
 
   try {
     await connectToGeminiLive();
@@ -1229,7 +1757,8 @@ async function startAudioCapture() {
       target: "offscreen",
     });
     isRecording = true;
-    sendSidepanelStatus("listening");
+    sendSidepanelPauseState();
+    sendSidepanelStatus(getCurrentSessionStatus());
   } catch (error) {
     // Revert halo if connection fails
     broadcastPillState(false);
@@ -1243,10 +1772,13 @@ async function startAudioCapture() {
 
 function stopAudioCapture() {
   isRecording = false;
+  isInputPaused = false;
   geminiSessionReady = false;
   isGeminiSpeaking = false;
+  currentVoiceActivityLevel = 0;
   stopScreenshotLoop();
   sendSidepanelStatus("ready");
+  sendSidepanelPauseState();
 
   // Dire à l'offscreen d'arrêter
   sendOffscreenMessage({
@@ -1261,6 +1793,7 @@ function stopAudioCapture() {
   }
 
   broadcastPillState(false);
+  broadcastVoiceActivity(0);
 }
 
 function broadcastPillState(isActive) {
@@ -1275,6 +1808,18 @@ function broadcastPillState(isActive) {
   });
 }
 
+function broadcastVoiceActivity(level) {
+  chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+    if (!tabs || tabs.length === 0) return;
+    chrome.tabs
+      .sendMessage(tabs[0].id, {
+        type: "UPDATE_VOICE_ACTIVITY",
+        level,
+      })
+      .catch(() => {});
+  });
+}
+
 // ============================================================================
 // BOUCLE AUTO-CAPTURE D'ÉCRAN (1 image/sec)
 // ============================================================================
@@ -1283,7 +1828,7 @@ function startScreenshotLoop() {
   if (screenshotInterval) return;
   console.error("📸 Démarrage de la boucle de capture d'écran (1 img/sec)...");
   screenshotInterval = setInterval(async () => {
-    if (!geminiWs || !geminiSessionReady || geminiWs.readyState !== WebSocket.OPEN || isGeminiSpeaking) return;
+    if (!geminiWs || !geminiSessionReady || geminiWs.readyState !== WebSocket.OPEN || isGeminiSpeaking || isInputPaused) return;
     try {
       const dataUrl = await captureScreenWithGridTool();
       const base64 = dataUrl.split(",")[1];
