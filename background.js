@@ -680,7 +680,10 @@ async function connectToGeminiLive() {
             const apiKey = result.apiKey?.trim();
             if (!apiKey) {
                 console.error("Clé API Gemini introuvable. Veuillez la configurer dans les options.");
-                chrome.runtime.openOptionsPage();
+                chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+                    if (tabs[0]?.id) chrome.sidePanel.open({ tabId: tabs[0].id }).catch(() => {});
+                });
+                chrome.runtime.sendMessage({ target: 'sidepanel', type: 'SHOW_SETUP' }).catch(() => {});
                 settleWithError(new Error("Clé API Gemini introuvable"));
                 return;
             }
@@ -975,7 +978,10 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
           }).catch((e) => {
               console.error("Erreur lors de startAudioCapture:", e);
               if (e?.name === 'NotAllowedError') {
-                  chrome.runtime.openOptionsPage().catch(() => {});
+                  chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+                      if (tabs[0]?.id) chrome.sidePanel.open({ tabId: tabs[0].id }).catch(() => {});
+                  });
+                  chrome.runtime.sendMessage({ target: 'sidepanel', type: 'SHOW_SETUP' }).catch(() => {});
               }
               sendResponse({ isRecording: false, error: toUserErrorMessage(e) });
           });

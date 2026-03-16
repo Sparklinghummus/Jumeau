@@ -21,17 +21,6 @@
             <span class="brand-name">Jumo</span>
             <span class="pro-badge">Pro</span>
           </div>
-          <div class="header-icons">
-            <button class="header-icon-btn" id="searchBtn" aria-label="Search">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-            </button>
-            <button class="header-icon-btn" id="settingsBtn" aria-label="Settings">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/><line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/><line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/><line x1="1" y1="14" x2="7" y2="14"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="17" y1="16" x2="23" y2="16"/></svg>
-            </button>
-            <button class="header-icon-btn" id="closeBtn" aria-label="Close">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-            </button>
-          </div>
         </div>
       </div>
 
@@ -41,7 +30,7 @@
           <div class="pipeline-icon">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
           </div>
-          <h1 class="pipeline-name" id="pipeline-name">Voice Capture Pipeline</h1>
+          <h1 class="pipeline-name" id="pipeline-name">Workflow Capture</h1>
           <span class="pipeline-status-badge running" id="pipeline-status-badge">Running</span>
         </div>
         <div class="pipeline-meta-row">
@@ -61,14 +50,101 @@
       </div>
 
       <!-- Footer -->
-      <div class="pipeline-footer">
-        <button id="openEditorBtn">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
-          Open in Pipeline Editor
-        </button>
+      <div class="pipeline-footer" style="border-bottom: 1px solid #eee9e0;">
+        <button id="openEditorBtn">Open App</button>
+      </div>
+
+      <!-- Recorder UI Widget -->
+      <div id="recorder-widget" class="recorder-widget">
+        <div class="recorder-status-row">
+          <div class="recording-indicator">
+            <span class="recording-dot pulse"></span>
+            <span class="recording-label">Recording</span>
+          </div>
+          <span class="recording-timer" id="recording-timer">00:00</span>
+        </div>
+        
+        <div class="recorder-waveform-container">
+          <div class="waveform-visualizer">
+            <div class="wave-bar"></div><div class="wave-bar"></div><div class="wave-bar"></div><div class="wave-bar"></div><div class="wave-bar"></div>
+            <div class="wave-bar"></div><div class="wave-bar"></div><div class="wave-bar"></div><div class="wave-bar"></div><div class="wave-bar"></div>
+            <div class="wave-bar"></div><div class="wave-bar"></div><div class="wave-bar"></div><div class="wave-bar"></div><div class="wave-bar"></div>
+            <div class="wave-bar"></div><div class="wave-bar"></div><div class="wave-bar"></div><div class="wave-bar"></div><div class="wave-bar"></div>
+          </div>
+        </div>
+        
+        <div class="live-transcription-label">LIVE TRANSCRIPTION</div>
+
+        <div class="recorder-controls">
+          <button id="recorder-pause-btn" class="ctrl-btn pause-btn" aria-label="Pause Recording">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" class="pause-icon">
+              <!-- Using rects for a stylized pause -->
+              <rect x="8" y="5" width="3" height="14" rx="1.5" fill="#888" />
+              <rect x="13" y="5" width="3" height="14" rx="1.5" fill="#888" />
+            </svg>
+          </button>
+          <button id="recorder-stop-btn" class="ctrl-btn stop-btn" aria-label="Stop Recording">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" class="stop-icon">
+              <rect x="7" y="7" width="10" height="10" rx="2" fill="white" />
+            </svg>
+          </button>
+        </div>
       </div>
 
     </div>
+    <!-- Setup / Onboarding overlay -->
+    <div id="setup-overlay" style="display:none; position:absolute; inset:0; background:#f0ece6; z-index:100; overflow-y:auto; padding:24px 16px 32px; box-sizing:border-box; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px;">
+        <div style="width:44px;height:44px;background:#111;border-radius:12px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="7.5" cy="15.5" r="5.5"/><path d="m21 2-9.6 9.6"/><path d="m15.5 7.5 3 3L22 7l-3-3"/>
+          </svg>
+        </div>
+        <div>
+          <div style="font-size:17px;font-weight:600;color:#111;letter-spacing:-0.3px;">Initial Setup</div>
+          <div style="font-size:12px;color:#888;margin-top:2px;">Connect Jumeau to your environment</div>
+        </div>
+      </div>
+
+      <!-- Step 1: API Key -->
+      <div style="background:#fff;border-radius:16px;padding:16px;margin-bottom:10px;display:flex;flex-direction:column;gap:12px;">
+        <div style="display:flex;align-items:flex-start;gap:10px;">
+          <div id="setup-badge-1" style="width:28px;height:28px;background:#f0ece6;border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:600;color:#555;flex-shrink:0;margin-top:1px;">1</div>
+          <div>
+            <div style="font-size:14px;font-weight:600;color:#111;">Gemini API Key</div>
+            <div style="font-size:12px;color:#888;margin-top:2px;line-height:1.5;">Your API key lets Jumeau enrich your voice sessions with AI</div>
+          </div>
+        </div>
+        <input id="setup-api-key" type="password" placeholder="AIzaSy..." autocomplete="off" spellcheck="false" style="width:100%;padding:11px 14px;font-size:13px;font-family:'SF Mono','Fira Mono',monospace;background:#f5f2ee;border:none;border-radius:10px;outline:none;color:#111;box-sizing:border-box;">
+        <div style="display:flex;align-items:center;gap:6px;font-size:11px;color:#999;">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#aaa" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
+          <span>Get your API key from <a href="https://aistudio.google.com/app/apikey" target="_blank" style="color:#111;font-weight:500;text-decoration:underline;text-underline-offset:2px;">Google AI Studio</a></span>
+        </div>
+      </div>
+
+      <!-- Step 2: Microphone -->
+      <div style="background:#fff;border-radius:16px;padding:16px;margin-bottom:10px;display:flex;flex-direction:column;gap:12px;">
+        <div style="display:flex;align-items:flex-start;gap:10px;">
+          <div id="setup-badge-2" style="width:28px;height:28px;background:#f0ece6;border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:600;color:#555;flex-shrink:0;margin-top:1px;">2</div>
+          <div>
+            <div style="font-size:14px;font-weight:600;color:#111;">Microphone Access</div>
+            <div style="font-size:12px;color:#888;margin-top:2px;line-height:1.5;">Allow access to capture your voice input</div>
+          </div>
+        </div>
+        <button id="setup-mic-btn" style="width:100%;padding:12px 16px;background:#f0ece6;border:none;border-radius:10px;font-size:13px;font-weight:500;color:#333;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:7px;">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="15" height="15">
+            <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" x2="12" y1="19" y2="22"/>
+          </svg>
+          Authorize microphone
+        </button>
+      </div>
+
+      <!-- Save -->
+      <button id="setup-save-btn" disabled style="width:100%;padding:14px;background:#d4cfc9;color:#a09a94;border:none;border-radius:12px;font-size:14px;font-weight:600;cursor:not-allowed;transition:background 0.2s,color 0.2s;box-sizing:border-box;">Save Setup</button>
+      <div id="setup-hint" style="text-align:center;font-size:11px;color:#aaa;margin-top:8px;">Complete the steps above to continue</div>
+      <div style="text-align:center;font-size:11px;color:#ccc;margin-top:16px;">Jumeau · Chrome Extension</div>
+    </div>
+
     <script src="sidepanel.js"></script>
   </body>
 </html>

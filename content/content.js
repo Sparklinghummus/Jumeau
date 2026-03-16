@@ -197,6 +197,7 @@ function updatePillUI(pillElement, isActive) {
     } else {
         pillElement.classList.remove('active');
     }
+    setScreenHaloActive(isActive);
 }
 
 // Fonction MVP: Dessiner un rectangle de surbrillance "Ink Layer"
@@ -241,11 +242,142 @@ function drawHighlight(selector) {
     }
 }
 
+// ============================================================================
+// SCREEN HALO - Multicolor glow around the viewport when agent is watching
+// ============================================================================
+let screenHaloWrapper = null;
+
+function injectScreenHalo() {
+    if (document.getElementById('jumeau-halo-wrapper')) return;
+
+    // Inject CSS into document head (needs to be outside Shadow DOM)
+    const style = document.createElement('style');
+    style.id = 'jumeau-halo-styles';
+    style.textContent = `
+        @property --jumeau-halo-angle {
+            syntax: '<angle>';
+            initial-value: 0deg;
+            inherits: false;
+        }
+
+        @keyframes jumeauHaloRotate {
+            to { --jumeau-halo-angle: 360deg; }
+        }
+
+        @keyframes jumeauHaloPulse {
+            0%, 100% { opacity: 0.85; }
+            50% { opacity: 1; }
+        }
+
+        #jumeau-halo-wrapper {
+            position: fixed;
+            inset: 0;
+            z-index: 2147483640;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.8s ease;
+        }
+
+        #jumeau-halo-wrapper.active {
+            opacity: 1;
+            animation: jumeauHaloPulse 3s ease-in-out infinite;
+        }
+
+        .jumeau-halo-border {
+            position: absolute;
+            inset: -5px;
+            padding: 5px;
+            background: conic-gradient(
+                from var(--jumeau-halo-angle) at 50% 50%,
+                #ff0080, #ff4500, #ffd700, #00ff88, #00bfff, #a855f7, #ff0080
+            );
+            -webkit-mask:
+                linear-gradient(#fff 0 0) content-box,
+                linear-gradient(#fff 0 0);
+            -webkit-mask-composite: xor;
+            mask-composite: exclude;
+            animation: jumeauHaloRotate 4s linear infinite;
+        }
+
+        .jumeau-halo-glow {
+            position: absolute;
+            inset: -12px;
+            padding: 12px;
+            background: conic-gradient(
+                from var(--jumeau-halo-angle) at 50% 50%,
+                #ff0080, #ff4500, #ffd700, #00ff88, #00bfff, #a855f7, #ff0080
+            );
+            -webkit-mask:
+                linear-gradient(#fff 0 0) content-box,
+                linear-gradient(#fff 0 0);
+            -webkit-mask-composite: xor;
+            mask-composite: exclude;
+            filter: blur(10px);
+            opacity: 0.55;
+            animation: jumeauHaloRotate 4s linear infinite;
+        }
+
+        .jumeau-halo-outer-glow {
+            position: absolute;
+            inset: -22px;
+            padding: 22px;
+            background: conic-gradient(
+                from var(--jumeau-halo-angle) at 50% 50%,
+                #ff0080, #ff4500, #ffd700, #00ff88, #00bfff, #a855f7, #ff0080
+            );
+            -webkit-mask:
+                linear-gradient(#fff 0 0) content-box,
+                linear-gradient(#fff 0 0);
+            -webkit-mask-composite: xor;
+            mask-composite: exclude;
+            filter: blur(22px);
+            opacity: 0.3;
+            animation: jumeauHaloRotate 4s linear infinite;
+        }
+    `;
+    document.head.appendChild(style);
+
+    // Create halo wrapper
+    const wrapper = document.createElement('div');
+    wrapper.id = 'jumeau-halo-wrapper';
+
+    const outerGlow = document.createElement('div');
+    outerGlow.className = 'jumeau-halo-outer-glow';
+
+    const glow = document.createElement('div');
+    glow.className = 'jumeau-halo-glow';
+
+    const border = document.createElement('div');
+    border.className = 'jumeau-halo-border';
+
+    wrapper.appendChild(outerGlow);
+    wrapper.appendChild(glow);
+    wrapper.appendChild(border);
+    document.body.appendChild(wrapper);
+
+    screenHaloWrapper = wrapper;
+}
+
+function setScreenHaloActive(isActive) {
+    if (!screenHaloWrapper) return;
+    if (isActive) {
+        screenHaloWrapper.classList.add('active');
+    } else {
+        screenHaloWrapper.classList.remove('active');
+    }
+}
+
 // Lancer l'injection
 if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', injectPill);
 } else {
     injectPill();
+}
+
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', injectScreenHalo);
+} else {
+    injectScreenHalo();
 }
 
 // ============================================================================
