@@ -245,23 +245,24 @@ function drawHighlight(selector) {
 // ============================================================================
 // SCREEN HALO - Multicolor glow around the viewport when agent is watching
 // ============================================================================
+// ============================================================================
+// SCREEN HALO - Multicolor glow around the viewport when agent is watching
+// ============================================================================
 let screenHaloWrapper = null;
 
 function injectScreenHalo() {
-    if (document.getElementById('jumeau-halo-wrapper')) return;
+    if (document.getElementById('jumeau-halo-wrapper')) {
+        screenHaloWrapper = document.getElementById('jumeau-halo-wrapper');
+        return;
+    }
 
     // Inject CSS into document head (needs to be outside Shadow DOM)
     const style = document.createElement('style');
     style.id = 'jumeau-halo-styles';
     style.textContent = `
-        @property --jumeau-halo-angle {
-            syntax: '<angle>';
-            initial-value: 0deg;
-            inherits: false;
-        }
-
         @keyframes jumeauHaloRotate {
-            to { --jumeau-halo-angle: 360deg; }
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
         }
 
         @keyframes jumeauHaloPulse {
@@ -276,6 +277,7 @@ function injectScreenHalo() {
             pointer-events: none;
             opacity: 0;
             transition: opacity 0.8s ease;
+            overflow: hidden;
         }
 
         #jumeau-halo-wrapper.active {
@@ -283,56 +285,44 @@ function injectScreenHalo() {
             animation: jumeauHaloPulse 3s ease-in-out infinite;
         }
 
-        .jumeau-halo-border {
+        .jumeau-halo-layer {
             position: absolute;
-            inset: -5px;
-            padding: 5px;
+            top: -100%;
+            left: -100%;
+            width: 300%;
+            height: 300%;
             background: conic-gradient(
-                from var(--jumeau-halo-angle) at 50% 50%,
                 #ff0080, #ff4500, #ffd700, #00ff88, #00bfff, #a855f7, #ff0080
             );
+            animation: jumeauHaloRotate 8s linear infinite;
+            transform-origin: center center;
+        }
+
+        .jumeau-halo-frame {
+            position: absolute;
+            inset: 0;
+            pointer-events: none;
             -webkit-mask:
                 linear-gradient(#fff 0 0) content-box,
                 linear-gradient(#fff 0 0);
             -webkit-mask-composite: xor;
             mask-composite: exclude;
-            animation: jumeauHaloRotate 4s linear infinite;
+            padding: 5px;
+            background: inherit;
         }
 
         .jumeau-halo-glow {
             position: absolute;
-            inset: -12px;
-            padding: 12px;
-            background: conic-gradient(
-                from var(--jumeau-halo-angle) at 50% 50%,
-                #ff0080, #ff4500, #ffd700, #00ff88, #00bfff, #a855f7, #ff0080
-            );
+            inset: -15px;
+            padding: 20px;
+            filter: blur(15px);
+            opacity: 0.7;
             -webkit-mask:
                 linear-gradient(#fff 0 0) content-box,
                 linear-gradient(#fff 0 0);
             -webkit-mask-composite: xor;
             mask-composite: exclude;
-            filter: blur(10px);
-            opacity: 0.55;
-            animation: jumeauHaloRotate 4s linear infinite;
-        }
-
-        .jumeau-halo-outer-glow {
-            position: absolute;
-            inset: -22px;
-            padding: 22px;
-            background: conic-gradient(
-                from var(--jumeau-halo-angle) at 50% 50%,
-                #ff0080, #ff4500, #ffd700, #00ff88, #00bfff, #a855f7, #ff0080
-            );
-            -webkit-mask:
-                linear-gradient(#fff 0 0) content-box,
-                linear-gradient(#fff 0 0);
-            -webkit-mask-composite: xor;
-            mask-composite: exclude;
-            filter: blur(22px);
-            opacity: 0.3;
-            animation: jumeauHaloRotate 4s linear infinite;
+            background: inherit;
         }
     `;
     document.head.appendChild(style);
@@ -341,25 +331,24 @@ function injectScreenHalo() {
     const wrapper = document.createElement('div');
     wrapper.id = 'jumeau-halo-wrapper';
 
-    const outerGlow = document.createElement('div');
-    outerGlow.className = 'jumeau-halo-outer-glow';
+    // The halo works by having two layers (border and glow) that "inherit" the background 
+    // from a common rotating background layer.
+    wrapper.innerHTML = `
+        <div class="jumeau-halo-inner" style="position: absolute; inset: 0; overflow: hidden; pointer-events: none;">
+            <div class="jumeau-halo-layer"></div>
+            <div class="jumeau-halo-frame" style="position: absolute; inset: 0; background: conic-gradient(#ff0080, #ff4500, #ffd700, #00ff88, #00bfff, #a855f7, #ff0080); animation: jumeauHaloRotate 8s linear infinite; -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0); -webkit-mask-composite: xor; padding: 5px;"></div>
+            <div class="jumeau-halo-glow" style="position: absolute; inset: -15px; background: conic-gradient(#ff0080, #ff4500, #ffd700, #00ff88, #00bfff, #a855f7, #ff0080); animation: jumeauHaloRotate 8s linear infinite; -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0); -webkit-mask-composite: xor; padding: 20px; filter: blur(15px); opacity: 0.7;"></div>
+        </div>
+    `;
 
-    const glow = document.createElement('div');
-    glow.className = 'jumeau-halo-glow';
-
-    const border = document.createElement('div');
-    border.className = 'jumeau-halo-border';
-
-    wrapper.appendChild(outerGlow);
-    wrapper.appendChild(glow);
-    wrapper.appendChild(border);
     document.body.appendChild(wrapper);
-
     screenHaloWrapper = wrapper;
 }
 
 function setScreenHaloActive(isActive) {
+    if (!screenHaloWrapper) injectScreenHalo();
     if (!screenHaloWrapper) return;
+    
     if (isActive) {
         screenHaloWrapper.classList.add('active');
     } else {

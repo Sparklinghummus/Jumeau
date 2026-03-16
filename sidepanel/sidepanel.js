@@ -385,66 +385,41 @@ document.addEventListener('DOMContentLoaded', () => {
         }, 1000);
     }
 
+    const waveBars = '<div class="wave-bar"></div>'.repeat(12);
+
     function applyRecordingUI(status) {
         const isRecordingMode = (status === 'listening' || status === 'thinking');
-        
+
         if (isRecordingMode) {
             if (!isRecordingUi) {
                 isRecordingUi = true;
                 startTimer();
             }
-            waveformVisualizer?.classList.add('active');
             recordingDot?.classList.add('pulse');
-            if (recorderStopBtn) {
-                recorderStopBtn.classList.add('is-recording');
-                recorderStopBtn.innerHTML = `
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" class="stop-icon">
-                        <rect x="7" y="7" width="10" height="10" rx="2" fill="white" />
-                    </svg>
-                `;
+            if (recordingLabel) {
+                recordingLabel.textContent = status === 'thinking' ? 'Thinking…' : 'Recording';
+                recordingLabel.classList.add('active');
             }
-            if (recordingLabel) recordingLabel.textContent = "Recording";
-            
+            recorderStopBtn?.classList.add('is-recording');
             if (status === 'thinking') {
-                if (recordingLabel) recordingLabel.textContent = "Thinking...";
-                waveformVisualizer.innerHTML = `<span style="font-weight:900;font-size:18px;letter-spacing:2px;color:#1a1a1a;margin-top:-8px;">.....................</span>`;
-                waveformVisualizer.classList.remove('active');
+                waveformVisualizer?.classList.remove('active');
             } else {
-                waveformVisualizer.innerHTML = `
-                    <div class="wave-bar"></div><div class="wave-bar"></div><div class="wave-bar"></div><div class="wave-bar"></div><div class="wave-bar"></div>
-                    <div class="wave-bar"></div><div class="wave-bar"></div><div class="wave-bar"></div><div class="wave-bar"></div><div class="wave-bar"></div>
-                    <div class="wave-bar"></div><div class="wave-bar"></div><div class="wave-bar"></div><div class="wave-bar"></div><div class="wave-bar"></div>
-                    <div class="wave-bar"></div><div class="wave-bar"></div><div class="wave-bar"></div><div class="wave-bar"></div><div class="wave-bar"></div>
-                `;
+                waveformVisualizer?.classList.add('active');
             }
         } else {
             isRecordingUi = false;
             clearInterval(timerInterval);
             timerInterval = null;
             secondsElapsed = 0;
-            if (recorderTimer) recorderTimer.textContent = "00:00";
-            
-            waveformVisualizer?.classList.remove('active');
+            if (recorderTimer) recorderTimer.textContent = '00:00';
             recordingDot?.classList.remove('pulse');
-            
-            if (recorderStopBtn) {
-                recorderStopBtn.classList.remove('is-recording');
-                recorderStopBtn.innerHTML = `
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-                        <circle cx="12" cy="12" r="7" fill="white" />
-                    </svg>
-                `;
+            if (recordingLabel) {
+                recordingLabel.textContent = 'Ready';
+                recordingLabel.classList.remove('active');
             }
-            if (recordingLabel) recordingLabel.textContent = "Ready";
-            
-            if (waveformVisualizer) {
-                waveformVisualizer.innerHTML = `
-                    <div class="wave-bar"></div><div class="wave-bar"></div><div class="wave-bar"></div><div class="wave-bar"></div><div class="wave-bar"></div>
-                    <div class="wave-bar"></div><div class="wave-bar"></div><div class="wave-bar"></div><div class="wave-bar"></div><div class="wave-bar"></div>
-                    <div class="wave-bar"></div><div class="wave-bar"></div><div class="wave-bar"></div><div class="wave-bar"></div><div class="wave-bar"></div>
-                    <div class="wave-bar"></div><div class="wave-bar"></div><div class="wave-bar"></div><div class="wave-bar"></div><div class="wave-bar"></div>
-                `;
-            }
+            recorderStopBtn?.classList.remove('is-recording');
+            waveformVisualizer?.classList.remove('active');
+            if (waveformVisualizer) waveformVisualizer.innerHTML = waveBars;
         }
     }
 
@@ -456,24 +431,13 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!isRecordingUi) return;
             isPaused = !isPaused;
             if (isPaused) {
-                waveformVisualizer.classList.remove('active');
-                recordingDot.classList.remove('pulse');
-                recorderPauseBtn.style.backgroundColor = '#eadecd';
-                recorderPauseBtn.innerHTML = `
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#888" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <polygon points="5 3 19 12 5 21 5 3"></polygon>
-                  </svg>
-                `;
+                waveformVisualizer?.classList.remove('active');
+                recordingDot?.classList.remove('pulse');
+                recorderPauseBtn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#888" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>`;
             } else {
-                waveformVisualizer.classList.add('active');
-                recordingDot.classList.add('pulse');
-                recorderPauseBtn.style.backgroundColor = '#f6f3ee';
-                recorderPauseBtn.innerHTML = `
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" class="pause-icon">
-                    <rect x="8" y="5" width="3" height="14" rx="1.5" fill="#888" />
-                    <rect x="13" y="5" width="3" height="14" rx="1.5" fill="#888" />
-                  </svg>
-                `;
+                waveformVisualizer?.classList.add('active');
+                recordingDot?.classList.add('pulse');
+                recorderPauseBtn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none"><rect x="6" y="4" width="4" height="16" rx="1.5" fill="#888"/><rect x="14" y="4" width="4" height="16" rx="1.5" fill="#888"/></svg>`;
             }
         });
     }

@@ -1131,6 +1131,9 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 async function startAudioCapture() {
     await setupOffscreenDocument('offscreen/offscreen.html');
 
+    // Activate halo immediately so the user sees feedback right away
+    broadcastPillState(true);
+
     try {
         await connectToGeminiLive();
         await sendOffscreenMessage({
@@ -1138,9 +1141,10 @@ async function startAudioCapture() {
             target: 'offscreen'
         });
         isRecording = true;
-        broadcastPillState(true);
         sendSidepanelStatus('listening');
     } catch (error) {
+        // Revert halo if connection fails
+        broadcastPillState(false);
         await sendOffscreenMessage({
             type: 'STOP_RECORDING',
             target: 'offscreen'
@@ -1172,14 +1176,12 @@ function stopAudioCapture() {
 }
 
 function broadcastPillState(isActive) {
-    // Mettre à jour l'icône content script
-    chrome.tabs.query({}, (tabs) => {
-        for (let tab of tabs) {
-            chrome.tabs.sendMessage(tab.id, {
-                type: 'UPDATE_PILL_STATE',
-                isActive: isActive
-            }).catch(() => {});
-        }
+    chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+        if (!tabs || tabs.length === 0) return;
+        chrome.tabs.sendMessage(tabs[0].id, {
+            type: 'UPDATE_PILL_STATE',
+            isActive: isActive
+        }).catch(() => {});
     });
 }
 

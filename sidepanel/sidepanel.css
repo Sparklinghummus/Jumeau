@@ -552,136 +552,112 @@ body {
 /* ── Recorder Widget ── */
 .recorder-widget {
   background: white;
-  padding: 16px 20px 24px;
+  padding: 10px 16px;
   flex-shrink: 0;
   display: flex;
-  flex-direction: column;
-  z-index: 10;
-  border-bottom-left-radius: 22px;
-  border-bottom-right-radius: 22px;
-}
-
-.recorder-status-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 12px;
-}
-
-.recording-indicator {
-  display: flex;
+  flex-direction: row;
   align-items: center;
   gap: 10px;
+  border-bottom-left-radius: 22px;
+  border-bottom-right-radius: 22px;
+  border-top: 1px solid #eee9e0;
+  min-height: 0;
+}
+
+.recorder-indicator {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  flex-shrink: 0;
 }
 
 .recording-dot {
-  width: 9px;
-  height: 9px;
+  width: 7px;
+  height: 7px;
+  background-color: #d1ccc5;
+  border-radius: 50%;
+  flex-shrink: 0;
+  transition: background-color 0.3s;
+}
+
+.recording-dot.pulse {
   background-color: #ef4444;
-  border-radius: 50%;
-  position: relative;
+  animation: dotPulse 1.5s ease-in-out infinite;
 }
 
-.recording-dot.pulse::after {
-  content: '';
-  position: absolute;
-  top: -4px;
-  left: -4px;
-  right: -4px;
-  bottom: -4px;
-  border: 2px solid rgba(239, 68, 68, 0.4);
-  border-radius: 50%;
-  animation: pulse-ring 1.5s cubic-bezier(0.215, 0.61, 0.355, 1) infinite;
-  opacity: 0;
-}
-
-@keyframes pulse-ring {
-  0% { transform: scale(0.6); opacity: 1; }
-  100% { transform: scale(2); opacity: 0; }
+@keyframes dotPulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
 }
 
 .recording-label {
-  font-size: 15px;
+  font-size: 12px;
   font-weight: 600;
-  color: #1a1a1a;
+  color: #9a9590;
   letter-spacing: -0.01em;
+  white-space: nowrap;
+  transition: color 0.3s;
 }
 
-.recording-timer {
-  font-size: 15px;
-  font-weight: 600;
-  color: #7b7873;
-  font-variant-numeric: tabular-nums;
-}
-
-.recorder-waveform-container {
-  background: #fdfaf5;
-  border-radius: 14px;
-  padding: 16px 20px;
-  display: flex;
-  justify-content: center;
-  margin-bottom: 16px;
-  box-shadow: inset 0 2px 4px rgba(0,0,0,0.01);
+.recording-label.active {
+  color: #1a1a1a;
 }
 
 .waveform-visualizer {
+  flex: 1;
   display: flex;
   align-items: center;
-  gap: 3.5px;
-  height: 24px;
+  justify-content: center;
+  gap: 2.5px;
+  height: 20px;
+  min-width: 0;
 }
 
 .wave-bar {
-  width: 3.5px;
-  background-color: #1a1a1a;
+  width: 2.5px;
+  background-color: #d9d5cc;
   border-radius: 2px;
-  height: 4px; /* Default height */
+  height: 3px;
+  transition: background-color 0.3s;
 }
 
-/* Simulated animation for waveform */
 .waveform-visualizer.active .wave-bar {
+  background-color: #1a1a1a;
   animation: waveAnim 0.8s ease-in-out infinite alternate;
 }
 
-.waveform-visualizer.active .wave-bar:nth-child(1) { animation-duration: 0.6s; }
-.waveform-visualizer.active .wave-bar:nth-child(2) { animation-duration: 0.8s; animation-delay: 0.1s; }
-.waveform-visualizer.active .wave-bar:nth-child(3) { animation-duration: 0.7s; animation-delay: 0.2s; }
-.waveform-visualizer.active .wave-bar:nth-child(4) { animation-duration: 0.9s; animation-delay: 0.3s; }
-.waveform-visualizer.active .wave-bar:nth-child(5) { animation-duration: 0.6s; animation-delay: 0.4s; }
-.waveform-visualizer.active .wave-bar:nth-child(6) { animation-duration: 0.8s; animation-delay: 0.5s; }
-.waveform-visualizer.active .wave-bar:nth-child(7) { animation-duration: 0.7s; animation-delay: 0.2s; }
-.waveform-visualizer.active .wave-bar:nth-child(8) { animation-duration: 0.6s; animation-delay: 0.1s; }
-.waveform-visualizer.active .wave-bar:nth-child(9) { animation-duration: 0.8s; animation-delay: 0.3s; }
-.waveform-visualizer.active .wave-bar:nth-child(10){ animation-duration: 0.9s; animation-delay: 0.4s; }
-.waveform-visualizer.active .wave-bar:nth-child(11){ animation-duration: 0.7s; animation-delay: 0.5s; }
-.waveform-visualizer.active .wave-bar:nth-child(12){ animation-duration: 0.6s; animation-delay: 0.6s; }
-.waveform-visualizer.active .wave-bar:nth-child(13){ animation-duration: 0.8s; animation-delay: 0.7s; }
-.waveform-visualizer.active .wave-bar:nth-child(14){ animation-duration: 1.0s; animation-delay: 0.8s; }
-.waveform-visualizer.active .wave-bar:nth-child(15){ animation-duration: 0.7s; animation-delay: 0.4s; }
-.waveform-visualizer.active .wave-bar:nth-child(16){ animation-duration: 0.6s; animation-delay: 0.2s; }
-.waveform-visualizer.active .wave-bar:nth-child(17){ animation-duration: 0.8s; animation-delay: 0.1s; }
-.waveform-visualizer.active .wave-bar:nth-child(18){ animation-duration: 0.7s; animation-delay: 0.3s; }
-.waveform-visualizer.active .wave-bar:nth-child(19){ animation-duration: 0.9s; animation-delay: 0.5s; }
-.waveform-visualizer.active .wave-bar:nth-child(20){ animation-duration: 0.6s; animation-delay: 0.6s; }
+.waveform-visualizer.active .wave-bar:nth-child(1)  { animation-duration: 0.6s; }
+.waveform-visualizer.active .wave-bar:nth-child(2)  { animation-duration: 0.8s; animation-delay: 0.05s; }
+.waveform-visualizer.active .wave-bar:nth-child(3)  { animation-duration: 0.7s; animation-delay: 0.1s; }
+.waveform-visualizer.active .wave-bar:nth-child(4)  { animation-duration: 0.9s; animation-delay: 0.15s; }
+.waveform-visualizer.active .wave-bar:nth-child(5)  { animation-duration: 0.6s; animation-delay: 0.2s; }
+.waveform-visualizer.active .wave-bar:nth-child(6)  { animation-duration: 0.8s; animation-delay: 0.25s; }
+.waveform-visualizer.active .wave-bar:nth-child(7)  { animation-duration: 0.7s; animation-delay: 0.2s; }
+.waveform-visualizer.active .wave-bar:nth-child(8)  { animation-duration: 0.6s; animation-delay: 0.15s; }
+.waveform-visualizer.active .wave-bar:nth-child(9)  { animation-duration: 0.8s; animation-delay: 0.1s; }
+.waveform-visualizer.active .wave-bar:nth-child(10) { animation-duration: 0.9s; animation-delay: 0.05s; }
+.waveform-visualizer.active .wave-bar:nth-child(11) { animation-duration: 0.7s; animation-delay: 0.1s; }
+.waveform-visualizer.active .wave-bar:nth-child(12) { animation-duration: 0.6s; animation-delay: 0.2s; }
 
 @keyframes waveAnim {
-  0% { height: 4px; }
-  100% { height: 22px; }
+  0%   { height: 3px; }
+  100% { height: 16px; }
 }
 
-.live-transcription-label {
+.recording-timer {
   font-size: 11px;
-  font-weight: 700;
-  color: #9f9a93;
-  letter-spacing: 0.08em;
-  margin-bottom: 24px;
+  font-weight: 600;
+  color: #b0aca5;
+  font-variant-numeric: tabular-nums;
+  flex-shrink: 0;
+  letter-spacing: 0.02em;
 }
 
 .recorder-controls {
   display: flex;
-  justify-content: center;
   align-items: center;
-  gap: 16px;
+  gap: 6px;
+  flex-shrink: 0;
 }
 
 .ctrl-btn {
@@ -695,30 +671,30 @@ body {
 }
 
 .ctrl-btn:active {
-  transform: scale(0.95);
+  transform: scale(0.92);
 }
 
 .pause-btn {
-  width: 52px;
-  height: 52px;
-  background-color: #f6f3ee;
+  width: 34px;
+  height: 34px;
+  background-color: #f0ece4;
 }
 
 .pause-btn:hover {
-  background-color: #ebe5dc;
+  background-color: #e6e0d6;
 }
 
 .stop-btn {
-  width: 62px;
-  height: 62px;
-  background-color: #ef4444; /* Red */
-  box-shadow: 0 4px 14px rgba(239, 68, 68, 0.3);
-  border: 3px solid transparent;
+  width: 34px;
+  height: 34px;
+  background-color: #ef4444;
+  box-shadow: 0 2px 8px rgba(239, 68, 68, 0.25);
+  border: 2px solid transparent;
   transition: all 0.2s ease;
 }
 
 .stop-btn.is-recording {
-  border: 3px solid #1d4ed8; /* Blue ring when active */
+  border-color: #1d4ed8;
 }
 
 .stop-btn:hover {
