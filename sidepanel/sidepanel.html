@@ -2,73 +2,73 @@
 <html>
   <head>
     <meta charset="UTF-8" />
-    <title>Jumeau - Live Canvas</title>
+    <title>Jumo - Voice Pipeline</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="sidepanel.css" />
   </head>
   <body>
-    <div class="canvas-header">
-      <div class="header-left">
-        <h1>Jumeau</h1>
-        <div id="ai-status" class="status-indicator"><span class="dot"></span> Prêt</div>
+    <div class="card">
+
+      <!-- Header -->
+      <div class="card-header">
+        <div class="header-top">
+          <div class="header-brand">
+            <div class="logo-bars">
+              <span></span><span></span><span></span>
+            </div>
+            <span class="brand-name">Jumo</span>
+            <span class="pro-badge">Pro</span>
+          </div>
+          <div class="header-icons">
+            <button class="header-icon-btn" id="searchBtn" aria-label="Search">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            </button>
+            <button class="header-icon-btn" id="settingsBtn" aria-label="Settings">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/><line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/><line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/><line x1="1" y1="14" x2="7" y2="14"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="17" y1="16" x2="23" y2="16"/></svg>
+            </button>
+            <button class="header-icon-btn" id="closeBtn" aria-label="Close">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            </button>
+          </div>
+        </div>
       </div>
-      <div class="header-actions">
-        <button
-          id="clearContextBtn"
-          class="secondary-btn danger-btn icon-btn"
-          aria-label="Vider le contexte"
-          title="Vider le contexte"
-        >
-          <svg viewBox="0 0 24 24" aria-hidden="true">
-            <path d="M3 6h18" />
-            <path d="M8 6V4h8v2" />
-            <path d="M19 6l-1 14H6L5 6" />
-            <path d="M10 11v6" />
-            <path d="M14 11v6" />
-          </svg>
+
+      <!-- Pipeline Header -->
+      <div class="pipeline-header" id="pipeline-header">
+        <div class="pipeline-title-row">
+          <div class="pipeline-icon">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+          </div>
+          <h1 class="pipeline-name" id="pipeline-name">Voice Capture Pipeline</h1>
+          <span class="pipeline-status-badge running" id="pipeline-status-badge">Running</span>
+        </div>
+        <div class="pipeline-meta-row">
+          <span class="pipeline-meta" id="pipeline-meta">0 blocks · 0 branches</span>
+          <span class="pipeline-progress-label" id="pipeline-progress-label">0/0</span>
+        </div>
+        <div class="pipeline-progress-bar">
+          <div class="pipeline-progress-fill" id="pipeline-progress-fill" style="width: 0%"></div>
+        </div>
+      </div>
+
+      <!-- Pipeline Body (scrollable) -->
+      <div class="pipeline-body" id="pipeline-scroll">
+        <div class="pipeline-timeline" id="pipeline-timeline">
+          <div class="empty-state">Le workflow en cours apparaîtra ici.</div>
+        </div>
+      </div>
+
+      <!-- Footer -->
+      <div class="pipeline-footer">
+        <button id="openEditorBtn">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+          Open in Pipeline Editor
         </button>
-        <button id="openAppBtn" class="secondary-btn">Ouvrir l'App</button>
       </div>
+
     </div>
-
-    <div class="tabs-container">
-        <div class="segmented-control">
-            <div class="segment-indicator" id="segment-indicator"></div>
-            <button class="segment-btn active" id="tab-actions">Canvas</button>
-            <button class="segment-btn" id="tab-transcription">Transcription</button>
-        </div>
-    </div>
-
-    <div class="canvas-body" id="panel-scroll">
-        <!-- ACTIONS VIEW -->
-        <div class="view-section active" id="view-actions">
-            <div class="section-label">Workflow live</div>
-            <div class="workflow-board" id="workflow-board">
-                <div class="empty-state">Le workflow en cours apparaîtra ici.</div>
-            </div>
-
-            <div class="section-label">Questions ouvertes</div>
-            <div class="questions-board" id="questions-board">
-                <div class="empty-state">Les questions de clarification apparaîtront ici.</div>
-            </div>
-
-            <div class="section-label">Journal</div>
-            <div class="action-list" id="action-list">
-                <div class="empty-state">Aucune action pour le moment.</div>
-            </div>
-        </div>
-
-      <!-- TRANSCRIPTION VIEW -->
-      <div class="view-section" id="view-transcription">
-        <div class="chat-list" id="chat-list">
-          <div class="empty-state">La transcription apparaîtra ici.</div>
-        </div>
-      </div>
-    </div>
-
-    <div class="canvas-footer">
-      <button id="exportBtn" disabled>Exporter le Blueprint</button>
-    </div>
-
     <script src="sidepanel.js"></script>
   </body>
 </html>

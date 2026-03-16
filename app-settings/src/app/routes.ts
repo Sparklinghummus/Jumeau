@@ -1,4 +1,4 @@
-import { createBrowserRouter } from "react-router";
+import { createHashRouter } from "react-router";
 import { Layout } from "./components/layout";
 import { HomePage } from "./components/pages/home-page";
 import { WorkflowsOverview } from "./components/pages/workflows-overview";
@@ -8,7 +8,7 @@ import { NotesPage } from "./components/pages/notes-page";
 import { ContextPage } from "./components/pages/context-page";
 import { SkillBuilderPage } from "./components/pages/skill-builder-page";
 
-export const router = createBrowserRouter([
+export const router = createHashRouter([
   {
     path: "/",
     Component: Layout,

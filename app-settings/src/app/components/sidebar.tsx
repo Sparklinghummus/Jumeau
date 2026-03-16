@@ -1,3 +1,4 @@
+import { useState, useEffect } from "react";
 import { NavLink } from "react-router";
 import {
   Home,
@@ -11,6 +12,8 @@ import {
   Brain,
 } from "lucide-react";
 
+declare const chrome: any;
+
 const navItems = [
   { to: "/", icon: Home, label: "Home", end: true },
   { to: "/context", icon: Brain, label: "Context", end: false },
@@ -20,6 +23,37 @@ const navItems = [
 ];
 
 export function Sidebar() {
+  const [isRecording, setIsRecording] = useState(false);
+
+  useEffect(() => {
+    if (typeof chrome !== "undefined" && chrome.runtime) {
+      chrome.runtime.sendMessage({ type: "GET_AUDIO_STATE" }, (response: any) => {
+        if (response) setIsRecording(response.isRecording);
+      });
+      const listener = (message: any) => {
+        if (message.type === "UPDATE_PILL_STATE") {
+          setIsRecording(message.isActive ?? false);
+        }
+      };
+      chrome.runtime.onMessage.addListener(listener);
+      return () => chrome.runtime.onMessage.removeListener(listener);
+    }
+  }, []);
+
+  const handleToggleRecording = () => {
+    if (typeof chrome !== "undefined" && chrome.runtime) {
+      chrome.runtime.sendMessage({ type: "TOGGLE_AUDIO" }, (response: any) => {
+        if (response) setIsRecording(response.isRecording);
+      });
+    }
+  };
+
+  const handleSettings = () => {
+    if (typeof chrome !== "undefined" && chrome.runtime) {
+      chrome.runtime.openOptionsPage();
+    }
+  };
+
   return (
     <aside className="w-52 bg-background flex flex-col h-full shrink-0 border-r border-border">
       {/* Logo */}
@@ -72,8 +106,12 @@ export function Sidebar() {
         <p className="text-muted-foreground mb-3" style={{ fontSize: "13px" }}>
           Capture skills, workflows, and notes with your voice.
         </p>
-        <button className="px-3 py-1.5 border border-border rounded-lg text-foreground bg-card hover:bg-accent transition-colors" style={{ fontSize: "13px" }}>
-          Start recording
+        <button
+          onClick={handleToggleRecording}
+          className={`px-3 py-1.5 border rounded-lg transition-colors ${isRecording ? "border-red-400 bg-red-50 text-red-600" : "border-border bg-card text-foreground hover:bg-accent"}`}
+          style={{ fontSize: "13px" }}
+        >
+          {isRecording ? "Stop recording" : "Start recording"}
         </button>
       </div>
 
@@ -83,7 +121,7 @@ export function Sidebar() {
           <Users className="w-[18px] h-[18px]" />
           <span>Invite your team</span>
         </button>
-        <button className="flex items-center gap-2.5 px-3 py-2 rounded-lg text-muted-foreground hover:text-foreground transition-colors text-left">
+        <button onClick={handleSettings} className="flex items-center gap-2.5 px-3 py-2 rounded-lg text-muted-foreground hover:text-foreground transition-colors text-left">
           <Settings className="w-[18px] h-[18px]" />
           <span>Settings</span>
         </button>

@@ -1,0 +1,225 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Jumo Sidepanel — Preview</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="sidepanel.css" />
+    <style>
+      /* Preview-only: simulate sidepanel width */
+      body {
+        max-width: 380px;
+        margin: 0 auto;
+        background: #f0ece4;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="card">
+
+      <!-- Header -->
+      <div class="card-header">
+        <div class="header-top">
+          <div class="header-brand">
+            <div class="logo-bars">
+              <span></span><span></span><span></span>
+            </div>
+            <span class="brand-name">Jumo</span>
+            <span class="pro-badge">Pro</span>
+          </div>
+          <div class="header-icons">
+            <button class="header-icon-btn" aria-label="Search">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            </button>
+            <button class="header-icon-btn" aria-label="Settings">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/><line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/><line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/><line x1="1" y1="14" x2="7" y2="14"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="17" y1="16" x2="23" y2="16"/></svg>
+            </button>
+            <button class="header-icon-btn" aria-label="Close">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Pipeline Header -->
+      <div class="pipeline-header" id="pipeline-header">
+        <div class="pipeline-title-row">
+          <div class="pipeline-icon">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+          </div>
+          <h1 class="pipeline-name" id="pipeline-name">Voice Capture Pipeline</h1>
+          <span class="pipeline-status-badge running" id="pipeline-status-badge">Running</span>
+        </div>
+        <div class="pipeline-meta-row">
+          <span class="pipeline-meta" id="pipeline-meta">5 blocks · 2 branches</span>
+          <span class="pipeline-progress-label" id="pipeline-progress-label">1/5</span>
+        </div>
+        <div class="pipeline-progress-bar">
+          <div class="pipeline-progress-fill" id="pipeline-progress-fill" style="width: 20%"></div>
+        </div>
+      </div>
+
+      <!-- Pipeline Body (scrollable) -->
+      <div class="pipeline-body" id="pipeline-scroll">
+        <div class="pipeline-timeline" id="pipeline-timeline">
+          <!-- Blocks will be injected here -->
+        </div>
+      </div>
+
+      <!-- Footer -->
+      <div class="pipeline-footer">
+        <button id="openEditorBtn">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+          Open in Pipeline Editor
+        </button>
+      </div>
+
+    </div>
+
+    <script>
+      // Demo data — simulates what the chrome extension would send
+      const demoBlocks = [
+        {
+          title: 'Voice Input',
+          type: 'core',
+          status: 'done',
+          description: 'Capture and parse voice input'
+        },
+        {
+          title: 'Is type "Skill"?',
+          type: 'condition',
+          status: 'running',
+          description: 'Continue if the context type is "Skill".'
+        },
+        {
+          title: 'Classify & enrich context',
+          type: 'ai',
+          status: 'pending',
+          description: 'Use AI to classify and enrich the voice input.'
+        },
+        {
+          title: 'Route by category',
+          type: 'condition',
+          status: 'pending',
+          description: 'Branch based on the classified category.'
+        },
+        {
+          title: 'Add to "Technical" tracker',
+          type: 'records',
+          status: 'pending',
+          description: ''
+        }
+      ];
+
+      const typeIcons = {
+        core:      '📋',
+        condition: '⚡',
+        ai:        '🧠',
+        records:   '📁',
+        action:    '🚀',
+        default:   '📦'
+      };
+
+      function checkSvg() {
+        return '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>';
+      }
+
+      function escapeHtml(value) {
+        return String(value)
+          .replaceAll('&', '&amp;')
+          .replaceAll('<', '&lt;')
+          .replaceAll('>', '&gt;')
+          .replaceAll('"', '&quot;')
+          .replaceAll("'", '&#39;');
+      }
+
+      function capitalize(str) {
+        return str.charAt(0).toUpperCase() + str.slice(1);
+      }
+
+      function statusLabel(status) {
+        switch (status) {
+          case 'done': return 'Done';
+          case 'running': return 'Running';
+          default: return 'Pending';
+        }
+      }
+
+      function renderBlocks(blocks) {
+        const timeline = document.getElementById('pipeline-timeline');
+
+        const html = blocks.map((node, index) => {
+          const status = node.status || 'pending';
+          const isLast = index === blocks.length - 1;
+          const type = (node.type || 'default').toLowerCase();
+          const icon = typeIcons[type] || typeIcons.default;
+
+          let lineStatus = 'pending';
+          if (!isLast) {
+            const nextStatus = blocks[index + 1]?.status || 'pending';
+            if (status === 'done' && nextStatus === 'done') lineStatus = 'done';
+            else if (status === 'done' && (nextStatus === 'running' || nextStatus === 'pending')) lineStatus = 'running';
+            else lineStatus = 'pending';
+          }
+
+          let dotContent = '';
+          if (status === 'done') dotContent = checkSvg();
+
+          return `
+            <div class="block-row" style="animation-delay: ${index * 0.08}s">
+              <div class="block-timeline">
+                <div class="block-timeline-dot ${status}">${dotContent}</div>
+                <div class="block-timeline-line ${isLast ? 'hidden' : lineStatus}"></div>
+              </div>
+              <div class="block-card ${status}">
+                <div class="block-card-top">
+                  <div class="block-card-icon ${type}">${icon}</div>
+                  <div class="block-card-header">
+                    <div class="block-card-title">
+                      ${escapeHtml(node.title || 'Untitled block')}
+                      <span class="block-card-status ${status}">
+                        <span class="block-card-status-dot ${status}"></span>
+                        ${statusLabel(status)}
+                      </span>
+                    </div>
+                    <div class="block-card-type ${type}">${escapeHtml(capitalize(type))}</div>
+                  </div>
+                </div>
+                ${node.description ? `<div class="block-card-description">${escapeHtml(node.description)}</div>` : ''}
+              </div>
+            </div>
+          `;
+        }).join('');
+
+        timeline.innerHTML = html;
+      }
+
+      renderBlocks(demoBlocks);
+
+      // Simulate a block progressing after 3s
+      setTimeout(() => {
+        demoBlocks[1].status = 'done';
+        demoBlocks[2].status = 'running';
+
+        document.getElementById('pipeline-progress-fill').style.width = '40%';
+        document.getElementById('pipeline-progress-label').textContent = '2/5';
+
+        renderBlocks(demoBlocks);
+      }, 3000);
+
+      // Simulate another block after 6s
+      setTimeout(() => {
+        demoBlocks[2].status = 'done';
+        demoBlocks[3].status = 'running';
+
+        document.getElementById('pipeline-progress-fill').style.width = '60%';
+        document.getElementById('pipeline-progress-label').textContent = '3/5';
+
+        renderBlocks(demoBlocks);
+      }, 6000);
+    </script>
+  </body>
+</html>
